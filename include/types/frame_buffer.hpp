@@ -6,13 +6,14 @@
 
 class FrameBuffer {
 public:
-    FrameBuffer(int width, int height, const Color4& color = Color3{0, 0, 0});
+    // (0, 0) is the top-left corner
+    FrameBuffer(int width, int height, const Color4 &color = Color3{0, 0, 0});
 
-    void set_pixel(int x, int y, const Color4& color);
+    void set_pixel(int x, int y, const Color4 &color);
     Color4 get_pixel(int x, int y) const;
-    
+
     FrameBuffer clone() const;
-    void write(const std::string& filename);
+    void write(const std::string &filename);
 
 private:
     int m_width{0};
