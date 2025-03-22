@@ -15,6 +15,9 @@ public:
     FrameBuffer clone() const;
     void write(const std::string &filename);
 
+    inline int width() const { return m_width; }
+    inline int height() const { return m_height; }
+
 private:
     int m_width{0};
     int m_height{0};

@@ -11,3 +11,8 @@ Vec4 Vec4::operator+(const Vec4& other) const {
 Vec4 Vec4::operator-(const Vec4& other) const {
     return Vec4{x - other.x, y - other.y, z - other.z, w - other.w};
 }
+
+Vec4 Vec4::operator*(float scalar) const
+{
+    return Vec4{x * scalar, y * scalar, z * scalar, w * scalar};
+}
