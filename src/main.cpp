@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     try
     {
-        FrameBuffer frame_buffer{diablo_model()};
+        FrameBuffer frame_buffer{body_model()};
 
         frame_buffer.write("output.png");
     }
