@@ -11,7 +11,9 @@ public:
     Model(const std::string &filename);
 
     void load(const std::string &filename);
-    void draw_wireframe(FrameBuffer &frame_buffer, const Color3 &color) const;
+
+    void draw(FrameBuffer &frame_buffer, const float zoom = 1.f) const;
+    void draw_wireframe(FrameBuffer &frame_buffer, const Color3 &color, const float zoom = 1.f) const;
 
 private:
     std::vector<Vec3> m_vertices{};
