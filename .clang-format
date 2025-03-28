@@ -1,0 +1,17 @@
+BasedOnStyle: LLVM  # Use LLVM as a base (clean, modern defaults)
+IndentWidth: 4       # Use 4 spaces for indentation
+ContinuationIndentWidth: 4  # Ensure continued lines (e.g., function params) also use 4 spaces
+UseTab: Never        # Use spaces instead of tabs
+BreakBeforeBraces: Attach  # Place opening braces on the same line
+AllowShortFunctionsOnASingleLine: true 
+# AllowShortCompoundRequirementOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true  # Keep short if-statements compact
+AllowShortLoopsOnASingleLine: true  # Allow short loops (e.g., for, while) on one line
+AllowShortCaseLabelsOnASingleLine: true  # Allow short case labels on one line
+ColumnLimit: 120    # Wider limit for better readability
+IndentCaseLabels: true  # Indent case labels inside switch statements
+PointerAlignment: Left  # `int* ptr` instead of `int *ptr`
+Standard: Latest  # Use the latest C++ standard
+SortIncludes: true  # Automatically sort #include directives
+AccessModifierOffset: -4
+# BreakTemplateDeclarations: true

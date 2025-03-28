@@ -1,23 +1,45 @@
 #pragma once
 
-#include "types/vec4.hpp"
+#include "types/color.hpp"
+#include "types/vec.hpp"
+#include "utils/colors.hpp" // For default color
 
 #include <vector>
 
-// A simple class to represent a frame buffer
+// A simple ref counted frame buffer
 class FrameBuffer {
 public:
     // (0, 0) is the top-left corner
-    FrameBuffer(int width, int height, const Color4 &color = Color3{0, 0, 0});
+    FrameBuffer(int width, int height, const Color4& color = Colors::black);
 
-    void set_pixel(int x, int y, const Color4 &color);
-    Color4 get_pixel(int x, int y) const;
+    // Const accessor
+    const Color4& operator[](const Vec2i& pixel) const {
+        if (pixel.x() < 0 || pixel.x() >= m_width || pixel.y() < 0 || pixel.y() >= m_height) {
+            throw std::runtime_error("Requested coordinates to access were outside of the FrameBuffer: (" +
+                                     std::to_string(pixel.x()) + ", " + std::to_string(pixel.y()) + ")");
+        }
 
-    // Explicitly produces a clone the buffer
-    FrameBuffer clone() const;
+        // Convert the 2D index to a 1D index for the underlying vector
+        int index = pixel.y() * m_width + pixel.x();
+        return (*m_buffer_ptr)[index];
+    }
+
+    // Non-const accessor
+    Color4& operator[](const Vec2i& pixel) {
+        if (pixel.x() < 0 || pixel.x() >= m_width || pixel.y() < 0 || pixel.y() >= m_height) {
+            throw std::runtime_error("Requested coordinates to access were outside of the FrameBuffer: (" +
+                                     std::to_string(pixel.x()) + ", " + std::to_string(pixel.y()) + ")");
+        }
+        // Convert the 2D index to a 1D index for the underlying vector
+        int index = pixel.y() * m_width + pixel.x();
+        return (*m_buffer_ptr)[index];
+    }
+
+    // Explicitly produces a clone of the buffer
+    [[nodiscard]] FrameBuffer clone() const;
 
     // Writes the frame buffer to a file
-    void write(const std::string &filename);
+    void write(const std::string& filename);
 
     inline int width() const { return m_width; }
     inline int height() const { return m_height; }

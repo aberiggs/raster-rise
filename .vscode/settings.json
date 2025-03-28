@@ -1,4 +1,5 @@
 {
     "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
     "mesonbuild.buildFolder": "build",
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
 }
