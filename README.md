@@ -5,5 +5,5 @@ A minimal software rasterizer written in C++
 *Coming soon™*
 
 ## Samples
-<img src="samples/body.png" alt="body.obj render" style="width:50%; height:auto;">
-<img src="samples/diablo3_post.png" alt="diablo3_post.obj render" style="width:50%; height:auto;"/>
+<img src="samples/body.png" alt="body.obj render" style="width:60%; height:auto;">
+<img src="samples/diablo3_post.png" alt="diablo3_post.obj render" style="width:60%; height:auto;"/>
