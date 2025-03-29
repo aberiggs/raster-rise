@@ -17,10 +17,10 @@ int main(int argc, char* argv[]) {
 
     std::cout << "[ -- Starting raster-rise -- ]\n" << std::endl;
 
-    Timer::enabled = false;
+    Timer::enabled = true;
 
     try {
-        FrameBuffer frame_buffer{body_model()};
+        FrameBuffer frame_buffer{diablo_model()};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -71,7 +71,7 @@ FrameBuffer body_model() {
     FrameBuffer frame_buffer{1500, 1500};
 
     Model model{"objects/body.obj"};
-    model.draw(frame_buffer);
+    model.draw_with_lighting(frame_buffer);
 
     return frame_buffer;
 }
@@ -80,7 +80,7 @@ FrameBuffer diablo_model() {
     FrameBuffer frame_buffer{1500, 1500};
 
     Model model{"objects/diablo3_post.obj"};
-    model.draw(frame_buffer);
+    model.draw_with_lighting(frame_buffer);
 
     return frame_buffer;
 }

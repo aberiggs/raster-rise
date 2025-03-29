@@ -1,5 +1,7 @@
 #include "types/model.hpp"
 #include "primitives.hpp"
+#include "types/frame_buffer.hpp"
+#include "types/vec.hpp"
 #include "utils/timer.hpp"
 
 #include <algorithm>
@@ -48,9 +50,31 @@ void Model::load(const std::string& filename) {
     }
 }
 
-void Model::draw(FrameBuffer& frame_buffer, const float zoom) const {
-    // TODO: These transformations really should be handled somewhere else (maybe a camera?)
-    Timer timer("Model::draw()"); // For profiling
+std::vector<Vec3i> Model::vertices_in_camera_space(const Vec2i& window_size, float zoom) const {
+    // TODO: These transformations should probably be handled somewhere else (maybe a camera?)
+    std::vector<Vec3i> vertices_in_camera_space;
+    vertices_in_camera_space.reserve(m_vertices.size());
+    for (const auto& vertex : m_vertices) {
+        // Ensure that vertices in the range [0, 1] are mapped to the range [0, min(width, height) - 1]
+        // It has to be -1 because of the 0-based indexing
+        const float scale = zoom * (std::min(window_size.x(), window_size.y()) - 1);
+        // Scale vertices to fit screen
+        auto v = (vertex + Vec3f({1.0, 1.0, 1.0})) / 2;
+        // Please stay in the range [0, 1] :D
+        assert(v.x() >= 0 && v.x() <= 1);
+        assert(v.y() >= 0 && v.y() <= 1);
+        v = v * scale;
+        // Flip y to match screen coordinates (where the origin is at the top-left corner instead of the bottom-left)
+        v = Vec3i({static_cast<int>(v.x()), window_size.y() - 1 - static_cast<int>(v.y()), static_cast<int>(v.z())});
+
+        vertices_in_camera_space.emplace_back(v);
+    }
+
+    return vertices_in_camera_space;
+}
+
+void Model::draw_with_lighting(FrameBuffer& frame_buffer, const float zoom) const {
+    Timer timer("Model::draw_with_lighting()"); // For profiling
 
     // Until we implement backface culling, we'll just draw the faces according to their max z values
     std::vector sorted_faces{m_faces};
@@ -61,32 +85,45 @@ void Model::draw(FrameBuffer& frame_buffer, const float zoom) const {
         return max_z_a < max_z_b;
     });
 
-    // Ensure that vertices in the range [0, 1] are mapped to the range [0, min(width, height) - 1]
-    // It has to be -1 because of the 0-based indexing
-    float scale = zoom * (std::min(frame_buffer.width(), frame_buffer.height()) - 1);
+    auto vertices = vertices_in_camera_space(frame_buffer.size(), zoom);
     for (const auto& face : sorted_faces) {
-        // Scale vertices to fit screen
-        auto v0 = (m_vertices[face[0]] + Vec3f({1.0, 1.0, 1.0})) / 2;
-        auto v1 = (m_vertices[face[1]] + Vec3f({1.0, 1.0, 1.0})) / 2;
-        auto v2 = (m_vertices[face[2]] + Vec3f({1.0, 1.0, 1.0})) / 2;
+        // Calculate the normal of the face
+        Vec3f v0 = m_vertices[face[0]];
+        Vec3f v1 = m_vertices[face[1]];
+        Vec3f v2 = m_vertices[face[2]];
 
-        // Please stay in the range [0, 1] :D
-        assert(v0.x() >= 0 && v0.x() <= 1);
-        assert(v0.y() >= 0 && v0.y() <= 1);
-        assert(v1.x() >= 0 && v1.x() <= 1);
-        assert(v1.y() >= 0 && v1.y() <= 1);
-        assert(v2.x() >= 0 && v2.x() <= 1);
-        assert(v2.y() >= 0 && v2.y() <= 1);
+        Vec3f normal = (v1 - v0).cross(v2 - v0);
+        Vec3f unit_normal = normal.unit();
 
-        v0 = v0 * scale;
-        v1 = v1 * scale;
-        v2 = v2 * scale;
+        // Calculate the light intensity based on the angle between the normal and the light direction
+        Vec3f light_direction = Vec3f({1.f, 1.f, 1.f}).unit();                     // Light points into the screen
+        const float intensity = std::max(0.01f, unit_normal.dot(light_direction)); // Some ambient light
 
-        // Flip y to match screen coordinates (where the origin is at the top-left corner instead of the bottom-left)
-        v0 = Vec3f({v0.x(), static_cast<float>(frame_buffer.height() - 1) - v0.y(), v0.z()});
-        v1 = Vec3f({v1.x(), static_cast<float>(frame_buffer.height() - 1) - v1.y(), v1.z()});
-        v2 = Vec3f({v2.x(), static_cast<float>(frame_buffer.height() - 1) - v2.y(), v2.z()});
+        // Use the intensity to shade the color
+        Color3 color{intensity, intensity, intensity};
 
+        auto v0_screen = vertices[face[0]];
+        auto v1_screen = vertices[face[1]];
+        auto v2_screen = vertices[face[2]];
+
+        draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
+    }
+}
+
+void Model::draw_rainbow(FrameBuffer& frame_buffer, const float zoom) const {
+    Timer timer("Model::draw_rainbow()"); // For profiling
+
+    // Until we implement backface culling, we'll just draw the faces according to their max z values
+    std::vector sorted_faces{m_faces};
+    std::sort(sorted_faces.begin(), sorted_faces.end(), [this](const Face& a, const Face& b) {
+        auto max_z_a = std::max({m_vertices[a[0]].z(), m_vertices[a[1]].z(), m_vertices[a[2]].z()});
+        auto max_z_b = std::max({m_vertices[b[0]].z(), m_vertices[b[1]].z(), m_vertices[b[2]].z()});
+
+        return max_z_a < max_z_b;
+    });
+
+    auto vertices = vertices_in_camera_space(frame_buffer.size(), zoom);
+    for (const auto& face : sorted_faces) {
         // Pick a random color
         // TODO: Consider fixing this awful RNG
         float r = static_cast<float>(rand()) / RAND_MAX;
@@ -101,39 +138,23 @@ void Model::draw(FrameBuffer& frame_buffer, const float zoom) const {
 
         Color3 color{r, g, b};
 
+        auto v0 = vertices[face[0]];
+        auto v1 = vertices[face[1]];
+        auto v2 = vertices[face[2]];
+
         draw_triangle_filled(v0, v1, v2, frame_buffer, color);
     }
 }
 
 void Model::draw_wireframe(FrameBuffer& frame_buffer, const Color3& color, const float zoom) const {
-    // TODO: These transformations really should be handled somewhere else (maybe a camera?)
     Timer timer("Model::draw_wireframe()"); // For profiling
 
-    // Ensure that vertices in the range [0, 1] are mapped to the range [0, min(width, height) - 1]
-    // It has to be -1 because of the 0-based indexing
-    float scale = zoom * (std::min(frame_buffer.width(), frame_buffer.height()) - 1);
+    auto vertices = vertices_in_camera_space(frame_buffer.size(), zoom);
     for (const auto& face : m_faces) {
-        // Scale vertices to fit screen
-        auto v0 = (m_vertices[face[0]] + Vec3f({1.0, 1.0, 1.0})) / 2;
-        auto v1 = (m_vertices[face[1]] + Vec3f({1.0, 1.0, 1.0})) / 2;
-        auto v2 = (m_vertices[face[2]] + Vec3f({1.0, 1.0, 1.0})) / 2;
 
-        // Please stay in the range [0, 1] :D
-        assert(v0.x() >= 0 && v0.x() <= 1);
-        assert(v0.y() >= 0 && v0.y() <= 1);
-        assert(v1.x() >= 0 && v1.x() <= 1);
-        assert(v1.y() >= 0 && v1.y() <= 1);
-        assert(v2.x() >= 0 && v2.x() <= 1);
-        assert(v2.y() >= 0 && v2.y() <= 1);
-
-        v0 = v0 * scale;
-        v1 = v1 * scale;
-        v2 = v2 * scale;
-
-        // Flip y to match screen coordinates (where the origin is at the top-left corner instead of the bottom-left)
-        v0 = Vec3f({v0.x(), static_cast<float>(frame_buffer.height() - 1) - v0.y(), v0.z()});
-        v1 = Vec3f({v1.x(), static_cast<float>(frame_buffer.height() - 1) - v1.y(), v1.z()});
-        v2 = Vec3f({v2.x(), static_cast<float>(frame_buffer.height() - 1) - v2.y(), v2.z()});
+        auto v0 = vertices[face[0]];
+        auto v1 = vertices[face[1]];
+        auto v2 = vertices[face[2]];
 
         draw_triangle(v0, v1, v2, frame_buffer, color);
     }

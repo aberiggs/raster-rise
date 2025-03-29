@@ -12,7 +12,10 @@ public:
 
     void load(const std::string& filename);
 
-    void draw(FrameBuffer& frame_buffer, const float zoom = 1.f) const;
+    std::vector<Vec3i> vertices_in_camera_space(const Vec2i& window_size, const float zoom = 1.f) const;
+
+    void draw_with_lighting(FrameBuffer& frame_buffer, const float zoom = 1.f) const;
+    void draw_rainbow(FrameBuffer& frame_buffer, const float zoom = 1.f) const;
     void draw_wireframe(FrameBuffer& frame_buffer, const Color3& color, const float zoom = 1.f) const;
 
 private:

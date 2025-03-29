@@ -31,6 +31,83 @@ public:
         }
     }
 
+    [[nodiscard]] Vec cross(const Vec& other) const
+        requires(N == 3)
+    {
+        return Vec(
+            {y() * other.z() - z() * other.y(), z() * other.x() - x() * other.z(), x() * other.y() - y() * other.x()});
+    }
+
+    [[nodiscard]] T dot(const Vec& other) const {
+        T sum = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            sum += m_data[i] * other.m_data[i];
+        }
+        return sum;
+    }
+
+    [[nodiscard]] T length_squared() const {
+        T sum = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            sum += m_data[i] * m_data[i];
+        }
+        return sum;
+    }
+
+    [[nodiscard]] T length() const { return std::sqrt(length_squared()); }
+
+    [[nodiscard]] Vec unit() const {
+        auto len = length();
+        if (len == 0) {
+            throw std::runtime_error("Cannot normalize a zero-length vector");
+        }
+        return *this / len;
+    }
+
+    [[nodiscard]] Vec& operator+=(const Vec& other) {
+        for (std::size_t i = 0; i < N; ++i) {
+            m_data[i] += other.m_data[i];
+        }
+        return *this;
+    }
+
+    [[nodiscard]] Vec& operator-=(const Vec& other) {
+        for (std::size_t i = 0; i < N; ++i) {
+            m_data[i] -= other.m_data[i];
+        }
+        return *this;
+    }
+
+    [[nodiscard]] Vec& operator*=(T scalar) {
+        for (std::size_t i = 0; i < N; ++i) {
+            m_data[i] *= scalar;
+        }
+        return *this;
+    }
+
+    [[nodiscard]] Vec& operator/=(T scalar) {
+        for (std::size_t i = 0; i < N; ++i) {
+            m_data[i] /= scalar;
+        }
+        return *this;
+    }
+
+    [[nodiscard]] Vec operator+(const Vec& other) const { return Vec{*this} += other; };
+    [[nodiscard]] Vec operator-(const Vec& other) const { return Vec{*this} -= other; };
+    [[nodiscard]] Vec operator*(T scalar) const { return Vec{*this} *= scalar; };
+    [[nodiscard]] Vec operator/(T scalar) const { return Vec{*this} /= scalar; };
+
+    [[nodiscard]] bool operator==(const Vec& other) const {
+        for (std::size_t i = 0; i < N; ++i) {
+            if (m_data[i] != other.m_data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    [[nodiscard]] bool operator!=(const Vec& other) const { return !(*this == other); }
+
     // Const accessors
     [[nodiscard]] const T& operator[](std::size_t index) const { return m_data[index]; }
     [[nodiscard]] const T& x() const
@@ -76,39 +153,6 @@ public:
     {
         return m_data[3];
     }
-
-    [[nodiscard]] Vec& operator+=(const Vec& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            m_data[i] += other.m_data[i];
-        }
-        return *this;
-    }
-
-    [[nodiscard]] Vec& operator-=(const Vec& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            m_data[i] -= other.m_data[i];
-        }
-        return *this;
-    }
-
-    [[nodiscard]] Vec& operator*=(T scalar) {
-        for (std::size_t i = 0; i < N; ++i) {
-            m_data[i] *= scalar;
-        }
-        return *this;
-    }
-
-    [[nodiscard]] Vec& operator/=(T scalar) {
-        for (std::size_t i = 0; i < N; ++i) {
-            m_data[i] /= scalar;
-        }
-        return *this;
-    }
-
-    [[nodiscard]] Vec operator+(const Vec& other) const { return Vec{*this} += other; };
-    [[nodiscard]] Vec operator-(const Vec& other) const { return Vec{*this} -= other; };
-    [[nodiscard]] Vec operator*(T scalar) const { return Vec{*this} *= scalar; };
-    [[nodiscard]] Vec operator/(T scalar) const { return Vec{*this} /= scalar; };
 
 private:
     std::array<T, N> m_data{};

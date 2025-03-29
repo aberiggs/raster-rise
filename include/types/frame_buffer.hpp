@@ -43,6 +43,7 @@ public:
 
     inline int width() const { return m_width; }
     inline int height() const { return m_height; }
+    inline Vec2i size() const { return Vec2i({m_width, m_height}); }
 
 private:
     int m_width{0};
