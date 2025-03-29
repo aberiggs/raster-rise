@@ -1,5 +1,6 @@
 #include "types/model.hpp"
 #include "primitives.hpp"
+#include "utils/timer.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -49,6 +50,7 @@ void Model::load(const std::string& filename) {
 
 void Model::draw(FrameBuffer& frame_buffer, const float zoom) const {
     // TODO: These transformations really should be handled somewhere else (maybe a camera?)
+    Timer timer("Model::draw()"); // For profiling
 
     // Until we implement backface culling, we'll just draw the faces according to their max z values
     std::vector sorted_faces{m_faces};
@@ -105,6 +107,7 @@ void Model::draw(FrameBuffer& frame_buffer, const float zoom) const {
 
 void Model::draw_wireframe(FrameBuffer& frame_buffer, const Color3& color, const float zoom) const {
     // TODO: These transformations really should be handled somewhere else (maybe a camera?)
+    Timer timer("Model::draw_wireframe()"); // For profiling
 
     // Ensure that vertices in the range [0, 1] are mapped to the range [0, min(width, height) - 1]
     // It has to be -1 because of the 0-based indexing

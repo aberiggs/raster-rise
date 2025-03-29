@@ -4,6 +4,7 @@
 #include "types/frame_buffer.hpp"
 #include "types/model.hpp"
 #include "utils/colors.hpp"
+#include "utils/timer.hpp"
 
 FrameBuffer some_triangles();
 FrameBuffer some_filled_triangles();
@@ -14,10 +15,12 @@ FrameBuffer diablo_model();
 int main(int argc, char* argv[]) {
     int return_code = 0;
 
-    std::cout << "Starting raster-rise!" << std::endl;
+    std::cout << "[ -- Starting raster-rise -- ]\n" << std::endl;
+
+    Timer::enabled = false;
 
     try {
-        FrameBuffer frame_buffer{diablo_model()};
+        FrameBuffer frame_buffer{body_model()};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -25,7 +28,7 @@ int main(int argc, char* argv[]) {
         return_code = 1;
     }
 
-    std::cout << "Shutting down raster-rise!" << std::endl;
+    std::cout << "\n[ -- Stopping raster-rise -- ]" << std::endl;
 
     return return_code;
 }
