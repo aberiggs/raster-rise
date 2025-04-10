@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "cStandard": "c11",                // C standard
+            "cppStandard": "c++23"            // C++ standard
+
+        }
+    ],
+    "version": 4
+}

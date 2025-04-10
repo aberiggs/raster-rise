@@ -1,6 +1,8 @@
 #include <iostream>
 
+#include "camera.hpp"
 #include "primitives.hpp"
+#include "renderer.hpp"
 #include "types/frame_buffer.hpp"
 #include "types/model.hpp"
 #include "utils/colors.hpp"
@@ -8,9 +10,8 @@
 
 FrameBuffer some_triangles();
 FrameBuffer some_filled_triangles();
-FrameBuffer body_wireframe();
-FrameBuffer body_model();
-FrameBuffer diablo_model();
+FrameBuffer body_model(Renderer::Mode mode = Renderer::Mode::Shaded);
+FrameBuffer diablo_model(Renderer::Mode mode = Renderer::Mode::Shaded);
 
 int main(int argc, char* argv[]) {
     int return_code = 0;
@@ -58,29 +59,22 @@ FrameBuffer some_filled_triangles() {
     return frame_buffer;
 }
 
-FrameBuffer body_wireframe() {
+FrameBuffer body_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
+    Camera camera{};
 
     Model model{"objects/body.obj"};
-    model.draw_wireframe(frame_buffer, Colors::yellow);
+    Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;
 }
 
-FrameBuffer body_model() {
+FrameBuffer diablo_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
-
-    Model model{"objects/body.obj"};
-    model.draw_with_lighting(frame_buffer);
-
-    return frame_buffer;
-}
-
-FrameBuffer diablo_model() {
-    FrameBuffer frame_buffer{1500, 1500};
+    Camera camera{};
 
     Model model{"objects/diablo3_post.obj"};
-    model.draw_with_lighting(frame_buffer);
+    Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;
 }
