@@ -21,9 +21,9 @@ int main(int argc, char* argv[]) {
     Timer::enabled = true;
 
     try {
-        constexpr Renderer::Mode mode = Renderer::Mode::Rainbow;
+        constexpr Renderer::Mode mode = Renderer::Mode::Shaded;
 
-        FrameBuffer frame_buffer{diablo_model(mode)};
+        FrameBuffer frame_buffer{body_model(mode)};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {

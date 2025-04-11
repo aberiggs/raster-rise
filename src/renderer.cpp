@@ -39,9 +39,10 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices
     ndc_vertices.reserve(object_vertices.size());
     for (const auto& vertex : object_vertices) {
         // 1. Convert to world space
+        // Put at origin
         Matrix4x4f transform_matrix = Matrix4x4f::identity();
         // 2. Convert to view space (camera space)
-        Matrix4x4f view_matrix = look_at(Vec3f({0.f, 0.f, -5.f}), Vec3f({0.f, 0.f, 0.f}), Vec3f({0.f, 1.f, 0.f}));
+        Matrix4x4f view_matrix = look_at(Vec3f({-1.f, 0.f, -3.f}), Vec3f({0.f, 0.f, 0.f}), Vec3f({0.f, 1.f, 0.f}));
         // 3. Convert to clip space
         Matrix4x4f projection_matrix =
             perspective(45.0f, static_cast<float>(window_size.x()) / window_size.y(), 0.1f, 100.f);
@@ -67,9 +68,10 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
     Timer timer("Renderer::draw"); // For profiling
 
-    auto ndc_vertices = apply_vertex_shader(model.vertices(), frame_buffer.size());
+    std::vector<Vec3f> model_vertices = model.vertices();
+    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(model_vertices, frame_buffer.size());
 
-    // Until we implement backface culling, we'll just draw the faces according to their max z values
+    // For simplicity, we'll just draw the closer faces on top of the farther ones
     std::vector sorted_faces{model.faces()};
     std::sort(sorted_faces.begin(), sorted_faces.end(),
               [&vertices = ndc_vertices](const Model::Face& a, const Model::Face& b) {
@@ -82,17 +84,17 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
     for (const auto& face : sorted_faces) {
 
         // Convert to screen space
-        int x0 = static_cast<int>(ndc_vertices[face[0]].x()) * 0.5f * frame_buffer.width();
-        int y0 = static_cast<int>(ndc_vertices[face[0]].y()) * 0.5f * frame_buffer.height();
-        Vec3i v0_screen{{x0, y0, 0}};
+        int x0 = static_cast<int>((ndc_vertices[face[0]].x() + 1.0f) * 0.5f * frame_buffer.width());
+        int y0 = static_cast<int>((ndc_vertices[face[0]].y() + 1.0f) * 0.5f * frame_buffer.height());
+        Vec3i v0_screen({x0, y0, 0});
 
-        int x1 = static_cast<int>(ndc_vertices[face[1]].x()) * 0.5f * frame_buffer.width();
-        int y1 = static_cast<int>(ndc_vertices[face[1]].y()) * 0.5f * frame_buffer.height();
-        Vec3i v1_screen{{x1, y1, 0}};
+        int x1 = static_cast<int>((ndc_vertices[face[1]].x() + 1.0f) * 0.5f * frame_buffer.width());
+        int y1 = static_cast<int>((ndc_vertices[face[1]].y() + 1.0f) * 0.5f * frame_buffer.height());
+        Vec3i v1_screen({x1, y1, 0});
 
-        int x2 = static_cast<int>(ndc_vertices[face[2]].x()) * 0.5f * frame_buffer.width();
-        int y2 = static_cast<int>(ndc_vertices[face[2]].y()) * 0.5f * frame_buffer.height();
-        Vec3i v2_screen{{x2, y2, 0}};
+        int x2 = static_cast<int>((ndc_vertices[face[2]].x() + 1.0f) * 0.5f * frame_buffer.width());
+        int y2 = static_cast<int>((ndc_vertices[face[2]].y() + 1.0f) * 0.5f * frame_buffer.height());
+        Vec3i v2_screen({x2, y2, 0});
 
         switch (mode) {
             case Mode::Wireframe: {
@@ -104,9 +106,9 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
             case Mode::Shaded: {
 
                 // Calculate the normal of the face
-                Vec3f v0 = ndc_vertices[face[0]];
-                Vec3f v1 = ndc_vertices[face[1]];
-                Vec3f v2 = ndc_vertices[face[2]];
+                Vec3f v0 = model_vertices[face[0]];
+                Vec3f v1 = model_vertices[face[1]];
+                Vec3f v2 = model_vertices[face[2]];
 
                 Vec3f normal = (v1 - v0).cross(v2 - v0);
                 Vec3f unit_normal = normal.unit();
