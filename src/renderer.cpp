@@ -9,49 +9,19 @@
 
 namespace {
 
-Matrix4x4f look_at(Vec3f eye, Vec3f center, Vec3f up) {
-    Vec3f z = (center - eye).unit();
-    Vec3f x = z.cross(up).unit();
-    Vec3f y = x.cross(z);
-
-    auto view = Matrix4x4f{{
-        Vec4f({x.x(), y.x(), z.x(), -x.dot(eye)}),
-        Vec4f({x.y(), y.y(), z.y(), -y.dot(eye)}),
-        Vec4f({x.z(), y.z(), -z.z(), -z.dot(eye)}),
-        Vec4f({0, 0, 0, 1}),
-    }};
-
-    return view;
-}
-
-Matrix4x4f perspective(float fov, float aspect, float near, float far) {
-    float f = 1.0f / std::tan(fov / 2.0f);
-    return Matrix4x4f({
-        Vec4f({f / aspect, 0, 0, 0}),
-        Vec4f({0, f, 0, 0}),
-        Vec4f({0, 0, (far + near) / (near - far), (2 * far * near) / (near - far)}),
-        Vec4f({0, 0, -1, 0}),
-    });
-}
-
-std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices, const Vec2i& window_size) {
+std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices, const Matrix4x4f& transform_mat,
+                                       const Matrix4x4f& view_mat, const Matrix4x4f& projection_mat) {
     std::vector<Vec3f> ndc_vertices{};
     ndc_vertices.reserve(object_vertices.size());
     for (const auto& vertex : object_vertices) {
         // 1. Convert to world space
-        // Put at origin
-        Matrix4x4f transform_matrix = Matrix4x4f::identity();
         // 2. Convert to view space (camera space)
-        Matrix4x4f view_matrix = look_at(Vec3f({-1.f, 0.f, -3.f}), Vec3f({0.f, 0.f, 0.f}), Vec3f({0.f, 1.f, 0.f}));
         // 3. Convert to clip space
-        Matrix4x4f projection_matrix =
-            perspective(45.0f, static_cast<float>(window_size.x()) / window_size.y(), 0.1f, 100.f);
 
+        // TODO: Fix this...
         Matrix<float, 4, 1> vertex_matrix =
             std::array{std::array{vertex.x()}, std::array{vertex.y()}, std::array{vertex.z()}, std::array{1.f}};
-
-        Matrix<float, 4, 1> clip_matrix = projection_matrix * view_matrix * transform_matrix * vertex_matrix;
-
+        Matrix<float, 4, 1> clip_matrix = projection_mat * view_mat * transform_mat * vertex_matrix;
         Vec4f clip = Vec4f({clip_matrix.at(0, 0), clip_matrix.at(1, 0), clip_matrix.at(2, 0), clip_matrix.at(3, 0)});
 
         // 4. Convert to normalized device coordinates (NDC)
@@ -68,8 +38,14 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
     Timer timer("Renderer::draw"); // For profiling
 
+    float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
+
     std::vector<Vec3f> model_vertices = model.vertices();
-    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(model_vertices, frame_buffer.size());
+
+    // Put at origin until object transforms are implemented
+    Matrix4x4f transform_matrix = Matrix4x4f::identity();
+    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(model_vertices, transform_matrix, camera.view_matrix(),
+                                                          camera.projection_matrix(aspect_ratio));
 
     // For simplicity, we'll just draw the closer faces on top of the farther ones
     std::vector sorted_faces{model.faces()};
@@ -123,22 +99,20 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                 draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
                 break;
             }
-            case Mode::Rainbow: {
+            case Mode::Normals: {
+                // Calculate the normal of the face
+                Vec3f v0 = model_vertices[face[0]];
+                Vec3f v1 = model_vertices[face[1]];
+                Vec3f v2 = model_vertices[face[2]];
 
-                // Pick a random color
-                // TODO: Consider fixing this awful RNG
-                float r = static_cast<float>(rand()) / RAND_MAX;
-                float g = static_cast<float>(rand()) / RAND_MAX;
-                float b = static_cast<float>(rand()) / RAND_MAX;
+                Vec3f normal = (v1 - v0).cross(v2 - v0);
+                Vec3f unit_normal = normal.unit();
 
-                // Factor that washes out the colors
-                constexpr float pastelization_factor = 1.3;
-                r = (r + (pastelization_factor - 1)) / pastelization_factor;
-                g = (g + (pastelization_factor - 1)) / pastelization_factor;
-                b = (b + (pastelization_factor - 1)) / pastelization_factor;
+                float r = (unit_normal.x() + 1.0f) * 0.5f;
+                float g = (unit_normal.y() + 1.0f) * 0.5f;
+                float b = (unit_normal.z() + 1.0f) * 0.5f;
 
                 Color3 color{r, g, b};
-
                 draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
                 break;
             }
