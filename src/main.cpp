@@ -10,8 +10,8 @@
 
 FrameBuffer some_triangles();
 FrameBuffer some_filled_triangles();
-FrameBuffer body_model(Renderer::Mode mode = Renderer::Mode::Shaded);
-FrameBuffer diablo_model(Renderer::Mode mode = Renderer::Mode::Shaded);
+FrameBuffer body_model(Renderer::Mode mode = Renderer::Mode::Normals);
+FrameBuffer diablo_model(Renderer::Mode mode = Renderer::Mode::Normals);
 
 int main(int argc, char* argv[]) {
     int return_code = 0;
@@ -21,7 +21,9 @@ int main(int argc, char* argv[]) {
     Timer::enabled = true;
 
     try {
-        FrameBuffer frame_buffer{diablo_model()};
+        constexpr Renderer::Mode mode = Renderer::Mode::Normals;
+
+        FrameBuffer frame_buffer{body_model(mode)};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -62,6 +64,7 @@ FrameBuffer some_filled_triangles() {
 FrameBuffer body_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
+    camera.set_position(Vec3f({-1.f, 0.f, -2.f}));
 
     Model model{"objects/body.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);

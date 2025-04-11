@@ -25,10 +25,6 @@ public:
         for (std::size_t i = 0; i < M; ++i) {
             m_data[i] = other[i];
         }
-        // Initialize remaining elements to default value of T
-        for (std::size_t i = M; i < N; ++i) {
-            m_data[i] = T{};
-        }
     }
 
     [[nodiscard]] Vec cross(const Vec& other) const
