@@ -7,10 +7,12 @@ template <typename T, std::size_t N> class Vec {
 public:
     Vec() = default;
 
-    // Construction via array
-    Vec(const std::array<T, N>& array) : m_data(array) {}
+    // Construction via initializer list
+    template <typename... Args>
+        requires(sizeof...(Args) == N) && (std::is_constructible_v<Args, T> && ...)
+    constexpr Vec(Args... args) : m_data{static_cast<T>(args)...} {}
 
-    template <typename U> Vec(const Vec<U, N>& other) {
+    template <typename U> constexpr Vec(const Vec<U, N>& other) {
         // Copy the data from the other vector, converting types if necessary
         for (std::size_t i = 0; i < N; ++i) {
             m_data[i] = static_cast<T>(other[i]);
@@ -18,7 +20,7 @@ public:
     }
 
     template <std::size_t M>
-    Vec(const Vec<T, M>& other)
+    constexpr Vec(const Vec<T, M>& other)
         requires(M < N)
     {
         // Copy the data from the other vector, up to the size of M

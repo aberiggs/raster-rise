@@ -14,4 +14,4 @@ PointerAlignment: Left  # `int* ptr` instead of `int *ptr`
 Standard: Latest  # Use the latest C++ standard
 SortIncludes: true  # Automatically sort #include directives
 AccessModifierOffset: -4
-# BreakTemplateDeclarations: true
+# BreakTemplateDeclarations: Yes 
