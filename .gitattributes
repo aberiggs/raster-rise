@@ -1,0 +1,2 @@
+# Ignore 'external' from GitHub stats
+external/** linguist-vendored
