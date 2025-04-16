@@ -11,8 +11,9 @@ namespace {
 
 template <typename F> void async_for(std::size_t start, std::size_t end, F func) {
     std::vector<std::future<void>> futures{};
-    // TODO: Re-enable when we have backface culling
-    const std::size_t num_threads = 1; // std::thread::hardware_concurrency();
+    // TODO: Re-enable when z-buffer is implemented
+    constexpr bool parallelize = false;
+    const std::size_t num_threads = parallelize ? std::thread::hardware_concurrency() : 1;
     const std::size_t chunk_size = (end - start) / num_threads;
 
     for (int t = 0; t < num_threads; ++t) {
@@ -31,25 +32,37 @@ template <typename F> void async_for(std::size_t start, std::size_t end, F func)
     }
 }
 
-std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices, const Matrix4x4f& transform_mat,
-                                       const Matrix4x4f& view_mat, const Matrix4x4f& projection_mat) {
+// TODO: Reorganize
+std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, const Matrix4x4f& transform_mat,
+                                 const Matrix4x4f& view_mat) {
+
+    Timer timer("Convert to View Space"); // For profiling
+
+    std::vector<Vec4f> view_space_vertices{};
+    view_space_vertices.resize(object_vertices.size());
+    auto task = [&](std::size_t i) {
+        const auto& vertex = object_vertices[i];
+        Matrix<float, 4, 1> vertex_matrix{vertex.x(), vertex.y(), vertex.z(), 1.f};
+        Matrix<float, 4, 1> view_space = view_mat * vertex_matrix;
+        view_space_vertices[i] = view_space.col(0);
+    };
+
+    async_for(0, object_vertices.size(), task);
+
+    return view_space_vertices;
+}
+
+// TODO: Reorganize
+std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, const Matrix4x4f& projection_mat) {
 
     Timer timer("Apply Vertex Shader"); // For profiling
 
     std::vector<Vec3f> ndc_vertices{};
-    ndc_vertices.resize(object_vertices.size());
+    ndc_vertices.resize(view_space.size());
     auto task = [&](std::size_t i) {
-        const auto& vertex = object_vertices[i];
-
-        // 1. Convert to world space
-        Matrix<float, 4, 1> vertex_matrix{vertex.x(), vertex.y(), vertex.z(), 1.f};
-        auto world_space = transform_mat * vertex_matrix;
-
-        // 2. Convert to view space (camera space)
-        auto view_space = view_mat * world_space;
-
         // 3. Convert to clip space
-        Matrix<float, 4, 1> clip_matrix = projection_mat * view_space;
+        Matrix<float, 4, 1> view_space_mat{view_space[i].x(), view_space[i].y(), view_space[i].z(), view_space[i].w()};
+        Matrix<float, 4, 1> clip_matrix = projection_mat * view_space_mat;
         Vec4f clip_space = clip_matrix.col(0);
 
         // 4. Convert to normalized device coordinates (NDC)
@@ -58,7 +71,7 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec3f>& object_vertices
         ndc_vertices[i] = std::move(ndc);
     };
 
-    async_for(0, object_vertices.size(), task);
+    async_for(0, view_space.size(), task);
 
     return ndc_vertices;
 }
@@ -74,10 +87,12 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
 
     // Put at origin until object transforms are implemented
     constexpr auto transform_matrix = Matrix4x4f::identity();
-    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(model_vertices, transform_matrix, camera.view_matrix(),
-                                                          camera.projection_matrix(aspect_ratio));
+    // 1. Transform to view space
+    std::vector<Vec4f> view_space_vertices = to_view_space(model_vertices, transform_matrix, camera.view_matrix());
+    // 2. Transform to normalized device coordinates (NDC)
+    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
 
-    // For simplicity, we'll just draw the closer faces on top of the farther ones
+    // For simplicity, we'll just draw the closer faces on top of the farther ones (Painters algorithm)
     std::vector sorted_faces{model.faces()};
     std::sort(sorted_faces.begin(), sorted_faces.end(),
               [&vertices = ndc_vertices](const Model::Face& a, const Model::Face& b) {
@@ -87,10 +102,22 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                   return max_z_a < max_z_b;
               });
 
-    Timer timer2("Apply Fragment Shader"); // For profiling
-    // for (const auto& face : sorted_faces) {
     auto task = [&](std::size_t i) {
         const auto& face = sorted_faces[i];
+
+        // Get the vertices of the triangle in view space
+        Vec3f v0_view{view_space_vertices[face[0]]};
+        Vec3f v1_view{view_space_vertices[face[1]]};
+        Vec3f v2_view{view_space_vertices[face[2]]};
+
+        // Calculate the normal of the face - flip since we're in a left-handed coordinate system
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
+
+        if (normal.z() < 0) {
+            // Cull the backface
+            return;
+        }
+
         // Convert to screen space
         int x0 = static_cast<int>((ndc_vertices[face[0]].x() + 1.0f) * 0.5f * frame_buffer.width());
         int y0 = static_cast<int>((ndc_vertices[face[0]].y() + 1.0f) * 0.5f * frame_buffer.height());
@@ -112,13 +139,6 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                 break;
             }
             case Mode::Shaded: {
-
-                // Calculate the normal of the face
-                Vec3f v0 = model_vertices[face[0]];
-                Vec3f v1 = model_vertices[face[1]];
-                Vec3f v2 = model_vertices[face[2]];
-
-                Vec3f normal = (v1 - v0).cross(v2 - v0);
                 Vec3f unit_normal = normal.unit();
 
                 // Calculate the light intensity based on the angle between the normal and the light direction
@@ -131,12 +151,6 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                 break;
             }
             case Mode::Normals: {
-                // Calculate the normal of the face
-                Vec3f v0 = model_vertices[face[0]];
-                Vec3f v1 = model_vertices[face[1]];
-                Vec3f v2 = model_vertices[face[2]];
-
-                Vec3f normal = (v1 - v0).cross(v2 - v0);
                 Vec3f unit_normal = normal.unit();
 
                 float r = (unit_normal.x() + 1.0f) * 0.5f;
@@ -153,5 +167,6 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         }
     };
 
+    Timer timer2("Apply Fragment Shader"); // For profiling
     async_for(0, sorted_faces.size(), task);
 }

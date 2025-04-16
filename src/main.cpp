@@ -21,9 +21,9 @@ int main(int argc, char* argv[]) {
     Timer::enabled = true;
 
     try {
-        constexpr Renderer::Mode mode = Renderer::Mode::Wireframe;
+        constexpr Renderer::Mode mode = Renderer::Mode::Shaded;
 
-        FrameBuffer frame_buffer{body_model(mode)};
+        FrameBuffer frame_buffer{diablo_model(mode)};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -39,11 +39,9 @@ int main(int argc, char* argv[]) {
 FrameBuffer some_triangles() {
     FrameBuffer frame_buffer{1500, 1500};
 
-    draw_triangle(Vec3i({7, 45, 0}) * 10, Vec3i({35, 100, 0}) * 10, Vec3i({45, 60, 0}) * 10, frame_buffer, Colors::red);
-    draw_triangle(Vec3i({120, 35, 0}) * 10, Vec3i({90, 5, 0}) * 10, Vec3i({45, 110, 0}) * 10, frame_buffer,
-                  Colors::white);
-    draw_triangle(Vec3i({115, 83, 0}) * 10, Vec3i({80, 90, 0}) * 10, Vec3i({85, 120, 0}) * 10, frame_buffer,
-                  Colors::green);
+    draw_triangle(Vec3i{7, 45, 0} * 10, Vec3i{35, 100, 0} * 10, Vec3i{45, 60, 0} * 10, frame_buffer, Colors::red);
+    draw_triangle(Vec3i{120, 35, 0} * 10, Vec3i{90, 5, 0} * 10, Vec3i{45, 110, 0} * 10, frame_buffer, Colors::white);
+    draw_triangle(Vec3i{115, 83, 0} * 10, Vec3i{80, 90, 0} * 10, Vec3i{85, 120, 0} * 10, frame_buffer, Colors::green);
 
     return frame_buffer;
 }
@@ -51,11 +49,11 @@ FrameBuffer some_triangles() {
 FrameBuffer some_filled_triangles() {
     FrameBuffer frame_buffer{1500, 1500};
 
-    draw_triangle_filled(Vec3i({7, 45, 0}) * 10, Vec3i({35, 100, 0}) * 10, Vec3i({45, 60, 0}) * 10, frame_buffer,
+    draw_triangle_filled(Vec3i{7, 45, 0} * 10, Vec3i{35, 100, 0} * 10, Vec3i{45, 60, 0} * 10, frame_buffer,
                          Colors::red);
-    draw_triangle_filled(Vec3i({120, 35, 0}) * 10, Vec3i({90, 5, 0}) * 10, Vec3i({45, 110, 0}) * 10, frame_buffer,
+    draw_triangle_filled(Vec3i{120, 35, 0} * 10, Vec3i{90, 5, 0} * 10, Vec3i{45, 110, 0} * 10, frame_buffer,
                          Colors::white);
-    draw_triangle_filled(Vec3i({115, 83, 0}) * 10, Vec3i({80, 90, 0}) * 10, Vec3i({85, 120, 0}) * 10, frame_buffer,
+    draw_triangle_filled(Vec3i{115, 83, 0} * 10, Vec3i{80, 90, 0} * 10, Vec3i{85, 120, 0} * 10, frame_buffer,
                          Colors::green);
 
     return frame_buffer;
