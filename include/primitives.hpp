@@ -4,8 +4,6 @@
 #include "types/frame_buffer.hpp"
 #include "types/vec.hpp"
 
-// TODO: Convert these all to use Vec2i - they only operate on screen space coordinates
-
 // Convenience function to draw a horizontal line - faster than draw_line due to the assumptions we can make
 void draw_line_horizontal(int a_x, int b_x, int y, FrameBuffer& frame_buffer, const Color3& color);
 

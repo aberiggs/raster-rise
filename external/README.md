@@ -1,0 +1,2 @@
+## External Dependencies
+This directory contains external dependencies that are not part of the main codebase. These dependencies are included for convenience (you don't have to worry about installing any extra packages!) and may be used in various parts of the project.

@@ -11,6 +11,7 @@ namespace {
 
 template <typename F> void async_for(std::size_t start, std::size_t end, F func) {
     std::vector<std::future<void>> futures{};
+    // TODO: Re-enable when we have backface culling
     const std::size_t num_threads = 1; // std::thread::hardware_concurrency();
     const std::size_t chunk_size = (end - start) / num_threads;
 
@@ -126,7 +127,6 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
 
                 // Use the intensity to shade the color
                 Color3 color = {intensity, intensity, intensity};
-
                 draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
                 break;
             }

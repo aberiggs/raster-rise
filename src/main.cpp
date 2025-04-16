@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     Timer::enabled = true;
 
     try {
-        constexpr Renderer::Mode mode = Renderer::Mode::Normals;
+        constexpr Renderer::Mode mode = Renderer::Mode::Wireframe;
 
         FrameBuffer frame_buffer{body_model(mode)};
 

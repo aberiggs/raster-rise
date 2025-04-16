@@ -3,13 +3,11 @@
 #include <algorithm> // std::sort
 
 void draw_line_horizontal(int a_x, int b_x, int y, FrameBuffer& frame_buffer, const Color3& color) {
-    if (a_x > b_x) {
-        std::swap(a_x, b_x);
-    }
+    if (a_x > b_x) std::swap(a_x, b_x);
 
-    for (int x = a_x; x <= b_x; ++x) {
-        Vec2i pixel({x, y}); // Create a pixel coordinate from x and y
-        frame_buffer[pixel] = color;
+    for (int curr_x = a_x; curr_x <= b_x; curr_x += 1) {
+        auto& pixel = frame_buffer[curr_x, y];
+        pixel = color;
     }
 }
 
@@ -30,11 +28,9 @@ void draw_line(Vec3i a, Vec3i b, FrameBuffer& frame_buffer, const Color3& color)
         int y = a.y() + t * (b.y() - a.y());
 
         if (transpose) {
-            Vec2i pixel({y, x});
-            frame_buffer[pixel] = color;
+            frame_buffer[y, x] = color;
         } else {
-            Vec2i pixel({x, y});
-            frame_buffer[pixel] = color;
+            frame_buffer[x, y] = color;
         }
     }
 }
@@ -47,6 +43,7 @@ void draw_triangle(const Vec3i& a, const Vec3i& b, const Vec3i& c, FrameBuffer& 
 
 void draw_triangle_filled(const Vec3i& a, const Vec3i& b, const Vec3i& c, FrameBuffer& frame_buffer,
                           const Color3& color) {
+
     // A face made of three vertices
     std::array face{a, b, c};
     // Sort vertices by y coordinates

@@ -1,3 +1,4 @@
 *.png
 !samples/*.png
 .cache/*
+*.inc

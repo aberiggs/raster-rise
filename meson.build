@@ -12,7 +12,9 @@ external_includes = [
 
 sources = []
 
-subdir('src')
+# Automatically gather all source files in the src directory
+run_command('python3', 'scripts/gen_sources.py', check: true)
+subdir('build') # This is where the generated sources will be placed
 
 # Define the executable
 executable('raster-rise', sources, include_directories : inc_dir + external_includes,
