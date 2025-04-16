@@ -76,6 +76,17 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
     return ndc_vertices;
 }
 
+Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
+    // Convert to screen space
+    int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
+    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height);
+    return Vec3i{x, y, 0};
+}
+
+bool is_inside(const Vec3i& pixel, int width, int height) {
+    return pixel.x() >= 0 && pixel.x() < width && pixel.y() >= 0 && pixel.y() < height;
+}
+
 } // namespace
 
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
@@ -119,17 +130,16 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         }
 
         // Convert to screen space
-        int x0 = static_cast<int>((ndc_vertices[face[0]].x() + 1.0f) * 0.5f * frame_buffer.width());
-        int y0 = static_cast<int>((ndc_vertices[face[0]].y() + 1.0f) * 0.5f * frame_buffer.height());
-        Vec3i v0_screen{x0, y0, 0};
+        Vec3i v0_screen = to_screen_space(ndc_vertices[face[0]], frame_buffer.width(), frame_buffer.height());
+        Vec3i v1_screen = to_screen_space(ndc_vertices[face[1]], frame_buffer.width(), frame_buffer.height());
+        Vec3i v2_screen = to_screen_space(ndc_vertices[face[2]], frame_buffer.width(), frame_buffer.height());
 
-        int x1 = static_cast<int>((ndc_vertices[face[1]].x() + 1.0f) * 0.5f * frame_buffer.width());
-        int y1 = static_cast<int>((ndc_vertices[face[1]].y() + 1.0f) * 0.5f * frame_buffer.height());
-        Vec3i v1_screen{x1, y1, 0};
-
-        int x2 = static_cast<int>((ndc_vertices[face[2]].x() + 1.0f) * 0.5f * frame_buffer.width());
-        int y2 = static_cast<int>((ndc_vertices[face[2]].y() + 1.0f) * 0.5f * frame_buffer.height());
-        Vec3i v2_screen{x2, y2, 0};
+        // Check if the triangle is completely outside the screen
+        if (!is_inside(v0_screen, frame_buffer.width(), frame_buffer.height()) &&
+            !is_inside(v1_screen, frame_buffer.width(), frame_buffer.height()) &&
+            !is_inside(v2_screen, frame_buffer.width(), frame_buffer.height())) {
+            return;
+        }
 
         switch (mode) {
             case Mode::Wireframe: {

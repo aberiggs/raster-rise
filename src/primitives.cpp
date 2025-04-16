@@ -3,11 +3,18 @@
 #include <algorithm> // std::sort
 
 void draw_line_horizontal(int a_x, int b_x, int y, FrameBuffer& frame_buffer, const Color3& color) {
+    if (y < 0 || y >= frame_buffer.height() || a_x >= frame_buffer.width() || b_x < 0) {
+        return; // Out of bounds
+    }
+
+    // Clamp the coordinates to the frame buffer
+    a_x = std::max(0, a_x);
+    b_x = std::min(frame_buffer.width() - 1, b_x);
+
     if (a_x > b_x) std::swap(a_x, b_x);
 
     for (int curr_x = a_x; curr_x <= b_x; curr_x += 1) {
-        auto& pixel = frame_buffer[curr_x, y];
-        pixel = color;
+        frame_buffer[curr_x, y] = color;
     }
 }
 

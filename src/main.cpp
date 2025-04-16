@@ -62,7 +62,7 @@ FrameBuffer some_filled_triangles() {
 FrameBuffer body_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
-    camera.set_position(Vec3f({-1.f, 0.f, -2.f}));
+    camera.set_position({-1.f, 0.f, -2.f});
 
     Model model{"objects/body.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
@@ -73,6 +73,8 @@ FrameBuffer body_model(Renderer::Mode mode) {
 FrameBuffer diablo_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
+    camera.set_position({-1.f, 0.f, -2.f});
+    camera.set_target({-1.2f, 0.f, 0.f});
 
     Model model{"objects/diablo3_post.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
