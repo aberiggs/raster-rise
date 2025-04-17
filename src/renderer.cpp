@@ -43,8 +43,13 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
     view_space_vertices.resize(object_vertices.size());
     auto task = [&](std::size_t i) {
         const auto& vertex = object_vertices[i];
-        Matrix<float, 4, 1> vertex_matrix{vertex.x(), vertex.y(), vertex.z(), 1.f};
-        Matrix<float, 4, 1> view_space = view_mat * vertex_matrix;
+        Matrix<float, 4, 1> object_space{vertex.x(), vertex.y(), vertex.z(), 1.f};
+
+        // 2. Convert to world space
+        Matrix<float, 4, 1> world_space = transform_mat * object_space;
+
+        // 3. Convert to view space
+        Matrix<float, 4, 1> view_space = view_mat * world_space;
         view_space_vertices[i] = view_space.col(0);
     };
 
@@ -106,10 +111,10 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         // Calculate the normal of the face - flip since we're in a left-handed coordinate system
         Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-        if (normal.z() < 0) {
-            // Cull the backface
-            return;
-        }
+        // if (normal.z() < 0) {
+        // // Cull the backface
+        // return;
+        // }
 
         switch (mode) {
             case Mode::Wireframe: {

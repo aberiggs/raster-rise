@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     try {
         constexpr Renderer::Mode mode = Renderer::Mode::Normals;
 
-        FrameBuffer frame_buffer{diablo_model(mode)};
+        FrameBuffer frame_buffer{body_model(mode)};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -63,7 +63,7 @@ FrameBuffer some_filled_triangles() {
 FrameBuffer body_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
-    camera.set_position({-1.f, 0.f, -2.f});
+    camera.set_position({0.f, 0.f, -4.f});
 
     Model model{"objects/body.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
@@ -74,8 +74,7 @@ FrameBuffer body_model(Renderer::Mode mode) {
 FrameBuffer diablo_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
-    // camera.set_position({-1.f, 0.f, -2.f});
-    // camera.set_target({-1.2f, 0.f, 0.f});
+    camera.set_position({0.f, 0.f, -4.f});
 
     Model model{"objects/diablo3_post.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
