@@ -55,11 +55,6 @@ public:
     inline int height() const { return m_height; }
     inline Vec2i size() const { return Vec2i({m_width, m_height}); }
 
-    // Iterator begin
-    inline auto begin() { return m_buffer_ptr->begin(); }
-    // Iterator end
-    inline auto end() { return m_buffer_ptr->end(); }
-
 private:
     int m_width{0};
     int m_height{0};
