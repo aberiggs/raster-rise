@@ -19,8 +19,7 @@ void FrameBuffer::write(const std::string& filename) {
     std::vector<std::uint8_t> data(m_width * m_height * 4);
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
-            Vec2i pixel({x, y});            // Create a pixel coordinate from x and y
-            Color3& color = (*this)[pixel]; // Get the color at the pixel coordinate
+            Color3& color = (*this)[x, y]; // Get the color at the pixel coordinate
             // Perform gamma correction
             float gamma = 2.2f;
             color.r() = std::pow(color.r(), 1.0f / gamma);

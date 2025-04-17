@@ -42,8 +42,13 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
     view_space_vertices.resize(object_vertices.size());
     auto task = [&](std::size_t i) {
         const auto& vertex = object_vertices[i];
-        Matrix<float, 4, 1> vertex_matrix{vertex.x(), vertex.y(), vertex.z(), 1.f};
-        Matrix<float, 4, 1> view_space = view_mat * vertex_matrix;
+        Matrix<float, 4, 1> object_space{vertex.x(), vertex.y(), vertex.z(), 1.f};
+
+        // 2. Convert to world space
+        Matrix<float, 4, 1> world_space = transform_mat * object_space;
+
+        // 3. Convert to view space
+        Matrix<float, 4, 1> view_space = view_mat * world_space;
         view_space_vertices[i] = view_space.col(0);
     };
 
@@ -83,10 +88,6 @@ Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
     return Vec3i{x, y, 0};
 }
 
-bool is_inside(const Vec3i& pixel, int width, int height) {
-    return pixel.x() >= 0 && pixel.x() < width && pixel.y() >= 0 && pixel.y() < height;
-}
-
 } // namespace
 
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
@@ -110,7 +111,7 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                   auto max_z_a = std::max({vertices[a[0]].z(), vertices[a[1]].z(), vertices[a[2]].z()});
                   auto max_z_b = std::max({vertices[b[0]].z(), vertices[b[1]].z(), vertices[b[2]].z()});
 
-                  return max_z_a < max_z_b;
+                  return max_z_a > max_z_b;
               });
 
     auto task = [&](std::size_t i) {
@@ -124,22 +125,15 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         // Calculate the normal of the face - flip since we're in a left-handed coordinate system
         Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-        if (normal.z() < 0) {
-            // Cull the backface
-            return;
-        }
+        // if (normal.z() < 0) {
+        // // Cull the backface
+        // return;
+        // }
 
         // Convert to screen space
         Vec3i v0_screen = to_screen_space(ndc_vertices[face[0]], frame_buffer.width(), frame_buffer.height());
         Vec3i v1_screen = to_screen_space(ndc_vertices[face[1]], frame_buffer.width(), frame_buffer.height());
         Vec3i v2_screen = to_screen_space(ndc_vertices[face[2]], frame_buffer.width(), frame_buffer.height());
-
-        // Check if the triangle is completely outside the screen
-        if (!is_inside(v0_screen, frame_buffer.width(), frame_buffer.height()) &&
-            !is_inside(v1_screen, frame_buffer.width(), frame_buffer.height()) &&
-            !is_inside(v2_screen, frame_buffer.width(), frame_buffer.height())) {
-            return;
-        }
 
         switch (mode) {
             case Mode::Wireframe: {
