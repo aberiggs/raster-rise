@@ -2,3 +2,4 @@
 !samples/*.png
 .cache/*
 *.inc
+.DS_Store
