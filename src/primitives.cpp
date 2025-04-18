@@ -8,7 +8,7 @@ namespace {
 Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
     // Convert to screen space
     int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
-    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height);
+    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height) * -1 + height; // Flip y-axis;
     return Vec3i{x, y, 0};
 }
 
@@ -37,7 +37,7 @@ void draw_line_horizontal(int a_x, int b_x, int y, float z0, float z1, FrameBuff
     float z = z0;
     for (int curr_x = a_x; curr_x <= b_x; curr_x += 1) {
         // Z buffer test
-        if (z < z_buffer[curr_x, y]) {
+        if (z > z_buffer[curr_x, y]) {
             frame_buffer[curr_x, y] = color;
             z_buffer[curr_x, y] = z;
         }

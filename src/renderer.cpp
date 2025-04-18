@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <future>
+#include <iostream>
 #include <vector>
 
 namespace {
@@ -48,6 +49,7 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
         // 2. Convert to world space
         Matrix<float, 4, 1> world_space = transform_mat * object_space;
 
+        view_space_vertices[i] = world_space.col(0);
         // 3. Convert to view space
         Matrix<float, 4, 1> view_space = view_mat * world_space;
         view_space_vertices[i] = view_space.col(0);
@@ -109,7 +111,7 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         // std::cout << "v0_view: " << v0_view.z() << std::endl;
 
         // Calculate the normal of the face - flip since we're in a left-handed coordinate system
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * 1.f;
 
         // if (normal.z() < 0) {
         // // Cull the backface
@@ -139,9 +141,9 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
             case Mode::Normals: {
                 Vec3f unit_normal = normal.unit();
 
-                float r = (unit_normal.x() + 1.0f) * 0.5f;
-                float g = (unit_normal.y() + 1.0f) * 0.5f;
-                float b = (unit_normal.z() + 1.0f) * 0.5f;
+                float r = std::abs(unit_normal.x());
+                float g = std::abs(unit_normal.y());
+                float b = std::abs(unit_normal.z());
 
                 Color3 color{r, g, b};
                 draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,

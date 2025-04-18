@@ -7,7 +7,7 @@ public:
     // (0, 0) is the top-left corner
     ZBuffer(int width, int height) : m_width(width), m_height(height) {
         // Initialize the ZBuffer with a large value (infinity)
-        m_buffer.resize(width * height, std::numeric_limits<float>::infinity());
+        m_buffer.resize(width * height, -std::numeric_limits<float>::infinity());
     }
 
     // Accessor for the ZBuffer
