@@ -1,8 +1,7 @@
 #include "camera.hpp" // self
 
 Matrix4x4f Camera::view_matrix() const {
-    constexpr bool enabled = false;
-
+    constexpr bool enabled = true;
     if (!enabled) {
         return Matrix4x4f::identity();
     }
@@ -22,19 +21,18 @@ Matrix4x4f Camera::view_matrix() const {
 }
 
 Matrix4x4f Camera::projection_matrix(float aspect_ratio) const {
-    constexpr bool enabled = false;
-
+    constexpr bool enabled = true;
     if (!enabled) {
         return Matrix4x4f::identity();
     }
 
-    // float fov_rad = m_fov * (M_PI / 180.0f);
-    // float f = 1.0f / std::tan(fov_rad / 2.0f);
+    float fov_rad = m_fov * (M_PI / 180.0f);
+    float e = 1.0f / std::tan(fov_rad / 2.0f);
 
-    return {
-        Vec4f({1, 0, 0, 0}),
-        Vec4f({0, 1, 0, 0}),
-        Vec4f({0, 0, 1, 0}),
-        Vec4f({0, 0, -1 / (m_position.z()), 1}),
+    return Matrix4x4f{
+        Vec4f({(e / aspect_ratio), 0, 0, 0}),
+        Vec4f({0, (e), 0, 0}),
+        Vec4f({0, 0, -((m_far + m_near) / (m_near - m_far)), -(2 * m_far * m_near) / (m_near - m_far)}),
+        Vec4f({0, 0, -1, 1}),
     };
 }

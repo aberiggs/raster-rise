@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <future>
+#include <iostream>
 #include <vector>
 
 namespace {
@@ -118,6 +119,7 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
 
     auto task = [&](std::size_t i) {
         const auto& face = sorted_faces[i];
+        std::cout << "Drawing face " << i << " / " << sorted_faces.size() << std::endl;
 
         // Get the vertices of the triangle in view space
         Vec3f v0_view{view_space_vertices[face[0]]};
@@ -136,6 +138,8 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         Vec3i v0_screen = to_screen_space(ndc_vertices[face[0]], frame_buffer.width(), frame_buffer.height());
         Vec3i v1_screen = to_screen_space(ndc_vertices[face[1]], frame_buffer.width(), frame_buffer.height());
         Vec3i v2_screen = to_screen_space(ndc_vertices[face[2]], frame_buffer.width(), frame_buffer.height());
+
+        std::cout << "v0: " << v0_screen.x() << " v1: " << v1_screen.x() << " v2: " << v2_screen.x() << std::endl;
 
         switch (mode) {
             case Mode::Wireframe: {
