@@ -47,6 +47,7 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
         // 2. Convert to world space
         Matrix<float, 4, 1> world_space = transform_mat * object_space;
 
+        view_space_vertices[i] = world_space.col(0);
         // 3. Convert to view space
         Matrix<float, 4, 1> view_space = view_mat * world_space;
         view_space_vertices[i] = view_space.col(0);
@@ -84,7 +85,7 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
 Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
     // Convert to screen space
     int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
-    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height);
+    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height) * -1 + height; // Flip y-axis
     return Vec3i{x, y, 0};
 }
 
@@ -111,7 +112,8 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                   auto max_z_a = std::max({vertices[a[0]].z(), vertices[a[1]].z(), vertices[a[2]].z()});
                   auto max_z_b = std::max({vertices[b[0]].z(), vertices[b[1]].z(), vertices[b[2]].z()});
 
-                  return max_z_a > max_z_b;
+                  // Face further away gets drawn first
+                  return max_z_a < max_z_b;
               });
 
     auto task = [&](std::size_t i) {
@@ -123,7 +125,7 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         Vec3f v2_view{view_space_vertices[face[2]]};
 
         // Calculate the normal of the face - flip since we're in a left-handed coordinate system
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * 1.f;
 
         // if (normal.z() < 0) {
         // // Cull the backface
@@ -157,9 +159,9 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
             case Mode::Normals: {
                 Vec3f unit_normal = normal.unit();
 
-                float r = (unit_normal.x() + 1.0f) * 0.5f;
-                float g = (unit_normal.y() + 1.0f) * 0.5f;
-                float b = (unit_normal.z() + 1.0f) * 0.5f;
+                float r = std::abs(unit_normal.x());
+                float g = std::abs(unit_normal.y());
+                float b = std::abs(unit_normal.z());
 
                 Color3 color{r, g, b};
                 draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);

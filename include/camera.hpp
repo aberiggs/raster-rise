@@ -16,10 +16,9 @@ public:
     void set_fov(float fov) { m_fov = fov; }
 
 private:
-    Vec3f m_position = Vec3f({0.f, 0.f, -4.f});
+    Vec3f m_position = Vec3f({0.f, 0.f, -2.f});
     Vec3f m_target = Vec3f({0.f, 0.f, 0.f});
-    // TODO: Fix hack
-    Vec3f m_up = Vec3f({0.f, -1.f, 0.f});
+    Vec3f m_up = Vec3f({0.f, 1.f, 0.f});
     float m_fov{45.0f};
     float m_near{0.1f};
     float m_far{100.0f};
