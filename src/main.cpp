@@ -12,6 +12,7 @@ FrameBuffer some_triangles();
 FrameBuffer some_filled_triangles();
 FrameBuffer body_model(Renderer::Mode mode = Renderer::Mode::Normals);
 FrameBuffer diablo_model(Renderer::Mode mode = Renderer::Mode::Normals);
+FrameBuffer other(const std::string& name, Renderer::Mode mode = Renderer::Mode::Normals);
 
 int main(int argc, char* argv[]) {
     int return_code = 0;
@@ -23,7 +24,7 @@ int main(int argc, char* argv[]) {
     try {
         constexpr Renderer::Mode mode = Renderer::Mode::Normals;
 
-        FrameBuffer frame_buffer{body_model(mode)};
+        FrameBuffer frame_buffer{diablo_model(mode)};
 
         frame_buffer.write("output.png");
     } catch (const std::exception& e) {
@@ -74,9 +75,20 @@ FrameBuffer body_model(Renderer::Mode mode) {
 FrameBuffer diablo_model(Renderer::Mode mode) {
     FrameBuffer frame_buffer{1500, 1500};
     Camera camera{};
-    camera.set_position({0.f, 0.f, -4.f});
+    camera.set_position({0.f, 0.f, -3.f});
 
     Model model{"objects/diablo3_post.obj"};
+    Renderer::draw(model, camera, frame_buffer, mode);
+
+    return frame_buffer;
+}
+
+FrameBuffer other(const std::string& name, Renderer::Mode mode) {
+    FrameBuffer frame_buffer{1500, 1500};
+    Camera camera{};
+    camera.set_position({0.f, 0.f, -3.f});
+
+    Model model{name};
     Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;

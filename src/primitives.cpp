@@ -1,49 +1,35 @@
 #include "primitives.hpp" // self
+#include "types/vec.hpp"
 
 #include <algorithm> // std::sort
 #include <iostream>
 
 namespace {
 
-Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
+Vec2i to_screen_space(const Vec3f& ndc, int width, int height) {
     // Convert to screen space
     int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
-    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height) * -1 + height; // Flip y-axis;
-    return Vec3i{x, y, 0};
+    int y = static_cast<int>((-ndc.y() + 1.0f) * 0.5f * height); // Flip y-axis
+    return {x, y};
+}
+
+std::pair<Vec2i, Vec2i> find_bounding_box(Vec2i a, Vec2i b, Vec2i c) {
+    // Find the bounding box of the triangle
+    int min_x = std::min({a.x(), b.x(), c.x()});
+    int max_x = std::max({a.x(), b.x(), c.x()});
+    int min_y = std::min({a.y(), b.y(), c.y()});
+    int max_y = std::max({a.y(), b.y(), c.y()});
+
+    return {{min_x, min_y}, {max_x, max_y}};
+}
+
+double signed_triangle_area(Vec2i a, Vec2i b, Vec2i c) {
+    // The shoelace formula
+    return 0.5 *
+           ((b.y() - a.y()) * (b.x() + a.x()) + (c.y() - b.y()) * (c.x() + b.x()) + (a.y() - c.y()) * (a.x() + c.x()));
 }
 
 } // namespace
-
-void draw_line_horizontal(int a_x, int b_x, int y, float z0, float z1, FrameBuffer& frame_buffer, ZBuffer& z_buffer,
-                          const Color3& color) {
-    if (y < 0 || y >= frame_buffer.height() || a_x >= frame_buffer.width() || b_x < 0) {
-        return; // Out of bounds
-    }
-
-    // Clamp the coordinates to the frame buffer
-    a_x = std::max(0, a_x);
-    b_x = std::min(frame_buffer.width() - 1, b_x);
-
-    if (a_x > b_x) {
-        std::swap(a_x, b_x);
-        std::swap(z0, z1);
-    }
-
-    float dz = 0;
-    if (b_x - a_x > 0) {
-        dz = (z1 - z0) / static_cast<float>(b_x - a_x);
-    }
-
-    float z = z0;
-    for (int curr_x = a_x; curr_x <= b_x; curr_x += 1) {
-        // Z buffer test
-        if (z > z_buffer[curr_x, y]) {
-            frame_buffer[curr_x, y] = color;
-            z_buffer[curr_x, y] = z;
-        }
-        z += dz;
-    }
-}
 
 void draw_line(Vec3f a, Vec3f b, FrameBuffer& frame_buffer, const Color3& color) {
 
@@ -83,70 +69,38 @@ void draw_triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& 
 void draw_triangle_filled(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& frame_buffer, ZBuffer& z_buffer,
                           const Color3& color) {
 
-    std::cout << "a_z: " << a.z() << std::endl;
     // Convert to screen space
-    Vec3i a_screen = to_screen_space(a, frame_buffer.width(), frame_buffer.height());
-    Vec3i b_screen = to_screen_space(b, frame_buffer.width(), frame_buffer.height());
-    Vec3i c_screen = to_screen_space(c, frame_buffer.width(), frame_buffer.height());
+    Vec2i a_screen = to_screen_space(a, frame_buffer.width(), frame_buffer.height());
+    Vec2i b_screen = to_screen_space(b, frame_buffer.width(), frame_buffer.height());
+    Vec2i c_screen = to_screen_space(c, frame_buffer.width(), frame_buffer.height());
 
-    // A face made of three vertices
-    std::array face{a_screen, b_screen, c_screen};
-    // Sort vertices by y coordinates
-    std::sort(face.begin(), face.end(), [](const Vec3i& a, const Vec3i& b) { return a.y() < b.y(); });
+    auto [top_left, bottom_right] = find_bounding_box(a_screen, b_screen, c_screen);
 
-    // Slope of the line on the longest side (in terms of y)
-    // We'll consider this the "major side"
-    float dxdy0{0};
-    float dzdy0{0};
-    if (face[2].y() - face[0].y() > 0) {
-        dxdy0 = static_cast<float>(face[2].x() - face[0].x()) / (face[2].y() - face[0].y());
-        dzdy0 = static_cast<float>(c.z() - a.z()) / (face[2].y() - face[0].y());
-    }
+    double total_area = signed_triangle_area(a_screen, b_screen, c_screen);
 
-    // Slopes on the opposite sides
-    // We'll consider these the "minor sides"
-    float dxdy1{0};
-    float dzdy1{0};
-    if (face[1].y() - face[0].y() > 0) {
-        dxdy1 = static_cast<float>(face[1].x() - face[0].x()) / (face[1].y() - face[0].y());
-        dzdy1 = static_cast<float>(b.z() - a.z()) / (face[1].y() - face[0].y());
-    }
+    for (int x = std::max(0, top_left.x()); x <= std::min(bottom_right.x(), frame_buffer.width() - 1); ++x) {
+        for (int y = std::max(0, top_left.y()); y <= std::min(bottom_right.y(), frame_buffer.height() - 1); ++y) {
+            Vec2i p{x, y};
 
-    float dxdy2{0};
-    float dzdy2{0};
-    if (face[2].y() - face[1].y() > 0) {
-        dxdy2 = static_cast<float>(face[2].x() - face[1].x()) / (face[2].y() - face[1].y());
-        dzdy2 = static_cast<float>(c.z() - b.z()) / (face[2].y() - face[1].y());
-    }
+            // Check if the point is inside the triangle using barycentric coordinates
+            double alpha = signed_triangle_area(p, b_screen, c_screen);
+            double beta = signed_triangle_area(a_screen, p, c_screen);
+            double gamma = signed_triangle_area(a_screen, b_screen, p);
 
-    // Draw lower part of the triangle
-    for (int y = face[0].y(); y < face[1].y(); ++y) {
-        // x value on major side
-        int x0 = face[0].x() + dxdy0 * (y - face[0].y());
-        // z value on major side
-        float z0 = face[0].z() + dzdy0 * (y - face[0].y());
+            // Normalize the barycentric coordinates
+            alpha /= total_area;
+            beta /= total_area;
+            gamma /= total_area;
 
-        // x value on minor side
-        int x1 = face[1].x() + dxdy1 * (y - face[1].y());
-        // z value on minor side
-        float z1 = face[1].z() + dzdy1 * (y - face[1].y());
-
-        draw_line_horizontal(x0, x1, y, z0, z1, frame_buffer, z_buffer, color);
-    }
-
-    // Draw upper part of the triangle
-    for (int y = face[1].y(); y <= face[2].y(); ++y) {
-        // x value on major side
-        // TODO: Do not compute this twice...
-        int x0 = face[0].x() + dxdy0 * (y - face[0].y());
-        // z value on major side
-        float z0 = face[0].z() + dzdy0 * (y - face[0].y());
-
-        // x value on minor side
-        int x1 = face[2].x() + dxdy2 * (y - face[2].y());
-        // z value on minor side
-        float z1 = face[2].z() + dzdy2 * (y - face[2].y());
-
-        draw_line_horizontal(x0, x1, y, z0, z1, frame_buffer, z_buffer, color);
+            if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+                // Point is in the triangle
+                float z = alpha * a.z() + beta * b.z() + gamma * c.z();
+                if (z > z_buffer[x, y]) {
+                    // Z buffer test
+                    frame_buffer[x, y] = color;
+                    z_buffer[x, y] = z;
+                }
+            }
+        }
     }
 }

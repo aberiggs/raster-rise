@@ -108,10 +108,9 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         Vec3f v0_view{view_space_vertices[face[0]]};
         Vec3f v1_view{view_space_vertices[face[1]]};
         Vec3f v2_view{view_space_vertices[face[2]]};
-        // std::cout << "v0_view: " << v0_view.z() << std::endl;
 
-        // Calculate the normal of the face - flip since we're in a left-handed coordinate system
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * 1.f;
+        // Calculate the normal of the face
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view);
 
         // if (normal.z() < 0) {
         // // Cull the backface
