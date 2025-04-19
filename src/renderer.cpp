@@ -13,8 +13,7 @@ namespace {
 
 template <typename F> void async_for(std::size_t start, std::size_t end, F func) {
     std::vector<std::future<void>> futures{};
-    // TODO: Re-enable when z-buffer is implemented
-    constexpr bool parallelize = false;
+    constexpr bool parallelize = true;
     const std::size_t num_threads = parallelize ? std::thread::hardware_concurrency() : 1;
     const std::size_t chunk_size = (end - start) / num_threads;
 
@@ -99,7 +98,13 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
     // 2. Transform to normalized device coordinates (NDC)
     std::vector<Vec3f> ndc_vertices = apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
 
-    ZBuffer z_buffer{frame_buffer.width(), frame_buffer.height()};
+    // Only reconstruct the z-buffer if the size of the frame buffer has changed
+    static ZBuffer z_buffer{frame_buffer.width(), frame_buffer.height()};
+    if (z_buffer.size() != frame_buffer.width() * frame_buffer.height()) {
+        z_buffer = ZBuffer{frame_buffer.width(), frame_buffer.height()};
+    } else {
+        z_buffer.clear();
+    }
 
     auto task = [&](std::size_t i) {
         const auto& face = model.faces()[i];
@@ -110,12 +115,13 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
         Vec3f v2_view{view_space_vertices[face[2]]};
 
         // Calculate the normal of the face
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view);
+        // TODO: Figure out why this only works when flipped
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-        // if (normal.z() < 0) {
-        // // Cull the backface
-        // return;
-        // }
+        if (normal.z() < 0) {
+            // Cull the backface
+            return;
+        }
 
         switch (mode) {
             case Mode::Wireframe: {

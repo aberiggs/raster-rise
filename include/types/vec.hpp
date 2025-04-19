@@ -2,11 +2,12 @@
 
 #include <array>
 #include <cstring>
+#include <functional>
 
 // A simple vector that containing N elements of type T.
 template <typename T, std::size_t N> class Vec {
 public:
-    Vec() = default;
+    Vec() : m_data{} {};
 
     // Construction via initializer list
     template <typename... Args>
@@ -141,8 +142,21 @@ public:
         return m_data[3];
     }
 
+    bool operator==(const Vec& other) {
+        for (std::size_t i = 0; i < N; ++i) {
+            if (m_data[i] != other.m_data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    const std::array<T, N>& data() const { return m_data; }
+
+    [[nodiscard]] std::size_t size() const { return N; }
+
 private:
-    std::array<T, N> m_data{};
+    std::array<T, N> m_data;
 };
 
 using Vec2i = Vec<int, 2>;

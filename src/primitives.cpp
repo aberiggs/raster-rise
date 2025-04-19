@@ -1,9 +1,21 @@
 #include "primitives.hpp" // self
 #include "types/vec.hpp"
+#include "utils/timer.hpp"
 
-#include <algorithm> // std::sort
+#include <algorithm>  // std::sort
+#include <functional> // For std::hash
 #include <iostream>
-
+#include <unordered_map>
+namespace std {
+template <> struct hash<Vec3f> {
+    size_t operator()(const Vec3f& vec) const {
+        size_t h1 = std::hash<float>{}(vec.x());
+        size_t h2 = std::hash<float>{}(vec.y());
+        size_t h3 = std::hash<float>{}(vec.z());
+        return h1 ^ (h2 << 1) ^ (h3 << 2); // Combine hashes
+    }
+};
+} // namespace std
 namespace {
 
 Vec2i to_screen_space(const Vec3f& ndc, int width, int height) {
@@ -69,10 +81,34 @@ void draw_triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& 
 void draw_triangle_filled(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& frame_buffer, ZBuffer& z_buffer,
                           const Color3& color) {
 
+    // TODO: Consider moving these statics somewhere else
+    static std::mutex screen_cache_mutex;
+    static std::unordered_map<Vec3f, Vec2i> screen_cache{};
+    // TODO: Make this an option in a config class
+    constexpr bool use_cache = true; // Used to compare performance with and without cache
+
     // Convert to screen space
-    Vec2i a_screen = to_screen_space(a, frame_buffer.width(), frame_buffer.height());
-    Vec2i b_screen = to_screen_space(b, frame_buffer.width(), frame_buffer.height());
-    Vec2i c_screen = to_screen_space(c, frame_buffer.width(), frame_buffer.height());
+    screen_cache_mutex.lock();
+
+    if (!use_cache) {
+        screen_cache.clear();
+    }
+
+    if (screen_cache.find(a) == screen_cache.end()) {
+        screen_cache[a] = to_screen_space(a, frame_buffer.width(), frame_buffer.height());
+    }
+    if (screen_cache.find(b) == screen_cache.end()) {
+        screen_cache[b] = to_screen_space(b, frame_buffer.width(), frame_buffer.height());
+    }
+    if (screen_cache.find(c) == screen_cache.end()) {
+        screen_cache[c] = to_screen_space(c, frame_buffer.width(), frame_buffer.height());
+    }
+
+    Vec2i& a_screen = screen_cache[a];
+    Vec2i& b_screen = screen_cache[b];
+    Vec2i& c_screen = screen_cache[c];
+
+    screen_cache_mutex.unlock();
 
     auto [top_left, bottom_right] = find_bounding_box(a_screen, b_screen, c_screen);
 
@@ -95,11 +131,13 @@ void draw_triangle_filled(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameB
             if (alpha >= 0 && beta >= 0 && gamma >= 0) {
                 // Point is in the triangle
                 float z = alpha * a.z() + beta * b.z() + gamma * c.z();
+                z_buffer.lock(x, y);
                 if (z > z_buffer[x, y]) {
                     // Z buffer test
                     frame_buffer[x, y] = color;
                     z_buffer[x, y] = z;
                 }
+                z_buffer.unlock(x, y);
             }
         }
     }
