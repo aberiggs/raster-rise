@@ -14,8 +14,8 @@ public:
 
     void load(const std::string& filename);
 
-    std::vector<Face> faces() const { return m_faces; }
-    std::vector<Vec3f> vertices() const { return m_vertices; }
+    const std::vector<Face>& faces() const { return m_faces; }
+    const std::vector<Vec3f>& vertices() const { return m_vertices; }
 
     // TODO: Impl
     static Model sphere(int slices, int stacks);

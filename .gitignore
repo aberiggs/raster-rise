@@ -2,3 +2,6 @@
 !samples/*.png
 .cache/*
 *.inc
+.DS_Store
+src/meson.build
+!/meson.build

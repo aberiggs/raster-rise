@@ -1,7 +1,10 @@
 #include "renderer.hpp"
 #include "primitives.hpp"
 #include "types/matrix.hpp"
+#include "types/z_buffer.hpp"
 #include "utils/timer.hpp"
+
+#include <tracy/Tracy.hpp> // Tracy profiling
 
 #include <algorithm>
 #include <future>
@@ -12,8 +15,7 @@ namespace {
 
 template <typename F> void async_for(std::size_t start, std::size_t end, F func) {
     std::vector<std::future<void>> futures{};
-    // TODO: Re-enable when z-buffer is implemented
-    constexpr bool parallelize = false;
+    constexpr bool parallelize = true;
     const std::size_t num_threads = parallelize ? std::thread::hardware_concurrency() : 1;
     const std::size_t chunk_size = (end - start) / num_threads;
 
@@ -36,8 +38,9 @@ template <typename F> void async_for(std::size_t start, std::size_t end, F func)
 // TODO: Reorganize
 std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, const Matrix4x4f& transform_mat,
                                  const Matrix4x4f& view_mat) {
+    ZoneScopedN("to_view_space");
 
-    Timer timer("Convert to View Space"); // For profiling
+    Timer timer("Convert to View Space");
 
     std::vector<Vec4f> view_space_vertices{};
     view_space_vertices.resize(object_vertices.size());
@@ -61,8 +64,9 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
 
 // TODO: Reorganize
 std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, const Matrix4x4f& projection_mat) {
+    ZoneScopedN("apply_vertex_shader");
 
-    Timer timer("Apply Vertex Shader"); // For profiling
+    Timer timer("Apply Vertex Shader");
 
     std::vector<Vec3f> ndc_vertices{};
     ndc_vertices.resize(view_space.size());
@@ -73,6 +77,7 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
         Vec4f clip_space = clip_matrix.col(0);
 
         // 4. Convert to normalized device coordinates (NDC)
+        // TODO: Consider making ndc [0, 1] instead of [-1, 1]
         Vec3f ndc = Vec3f{clip_space.x(), clip_space.y(), clip_space.z()} / clip_space.w();
 
         ndc_vertices[i] = std::move(ndc);
@@ -83,69 +88,52 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
     return ndc_vertices;
 }
 
-Vec3i to_screen_space(const Vec3f& ndc, int width, int height) {
-    // Convert to screen space
-    int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
-    int y = static_cast<int>((ndc.y() + 1.0f) * 0.5f * height) * -1 + height; // Flip y-axis
-    return Vec3i{x, y, 0};
-}
-
 } // namespace
 
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
-    Timer timer("Renderer::draw"); // For profiling
+    FrameMarkNamed("Renderer::draw");
+
+    Timer timer("Renderer::draw");
 
     float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
-
-    std::vector<Vec3f> model_vertices = model.vertices();
 
     // Put at origin until object transforms are implemented
     constexpr auto transform_matrix = Matrix4x4f::identity();
     // 1. Transform to view space
-    std::vector<Vec4f> view_space_vertices = to_view_space(model_vertices, transform_matrix, camera.view_matrix());
+    std::vector<Vec4f> view_space_vertices = to_view_space(model.vertices(), transform_matrix, camera.view_matrix());
     // 2. Transform to normalized device coordinates (NDC)
     std::vector<Vec3f> ndc_vertices = apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
 
-    // For simplicity, we'll just draw the closer faces on top of the farther ones (Painters algorithm)
-    std::vector sorted_faces{model.faces()};
-    std::sort(sorted_faces.begin(), sorted_faces.end(),
-              [&vertices = ndc_vertices](const Model::Face& a, const Model::Face& b) {
-                  auto max_z_a = std::max({vertices[a[0]].z(), vertices[a[1]].z(), vertices[a[2]].z()});
-                  auto max_z_b = std::max({vertices[b[0]].z(), vertices[b[1]].z(), vertices[b[2]].z()});
-
-                  // Face further away gets drawn first
-                  return max_z_a < max_z_b;
-              });
+    // Only reconstruct the z-buffer if the size of the frame buffer has changed
+    static ZBuffer z_buffer{frame_buffer.width(), frame_buffer.height()};
+    if (z_buffer.size() != frame_buffer.width() * frame_buffer.height()) {
+        z_buffer = ZBuffer{frame_buffer.width(), frame_buffer.height()};
+    } else {
+        z_buffer.clear();
+    }
 
     auto task = [&](std::size_t i) {
-        const auto& face = sorted_faces[i];
-        std::cout << "Drawing face " << i << " / " << sorted_faces.size() << std::endl;
+        const auto& face = model.faces()[i];
 
         // Get the vertices of the triangle in view space
         Vec3f v0_view{view_space_vertices[face[0]]};
         Vec3f v1_view{view_space_vertices[face[1]]};
         Vec3f v2_view{view_space_vertices[face[2]]};
 
-        // Calculate the normal of the face - flip since we're in a left-handed coordinate system
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * 1.f;
+        // Calculate the normal of the face
+        // TODO: Figure out why this only works when flipped
+        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-        // if (normal.z() < 0) {
-        // // Cull the backface
-        // return;
-        // }
-
-        // Convert to screen space
-        Vec3i v0_screen = to_screen_space(ndc_vertices[face[0]], frame_buffer.width(), frame_buffer.height());
-        Vec3i v1_screen = to_screen_space(ndc_vertices[face[1]], frame_buffer.width(), frame_buffer.height());
-        Vec3i v2_screen = to_screen_space(ndc_vertices[face[2]], frame_buffer.width(), frame_buffer.height());
-
-        std::cout << "v0: " << v0_screen.x() << " v1: " << v1_screen.x() << " v2: " << v2_screen.x() << std::endl;
+        if (normal.z() < 0) {
+            // Cull the backface
+            return;
+        }
 
         switch (mode) {
             case Mode::Wireframe: {
 
                 Color3 color = Colors::green;
-                draw_triangle(v0_screen, v1_screen, v2_screen, frame_buffer, color);
+                draw_triangle(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer, color);
                 break;
             }
             case Mode::Shaded: {
@@ -157,7 +145,8 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
 
                 // Use the intensity to shade the color
                 Color3 color = {intensity, intensity, intensity};
-                draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
+                draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,
+                                     z_buffer, color);
                 break;
             }
             case Mode::Normals: {
@@ -168,7 +157,8 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
                 float b = std::abs(unit_normal.z());
 
                 Color3 color{r, g, b};
-                draw_triangle_filled(v0_screen, v1_screen, v2_screen, frame_buffer, color);
+                draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,
+                                     z_buffer, color);
                 break;
             }
             default: {
@@ -178,5 +168,5 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
     };
 
     Timer timer2("Apply Fragment Shader"); // For profiling
-    async_for(0, sorted_faces.size(), task);
+    async_for(0, model.faces().size(), task);
 }

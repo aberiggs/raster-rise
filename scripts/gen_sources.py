@@ -2,8 +2,7 @@ import os
 import glob
 
 SRC_DIR = 'src'
-BUILD_DIR = 'build'
-OUT_FILE = os.path.join(BUILD_DIR, 'meson.build')
+OUT_FILE = os.path.join(SRC_DIR, 'meson.build')
 
 def main():
     sources = []
@@ -12,7 +11,7 @@ def main():
 
     sources = sorted(sources)
     with open(OUT_FILE, 'w') as f:
-        f.write('sources = [\n')
+        f.write('sources += [\n')
         for s in sources:
             f.write(f"  '{s}',\n")
         f.write(']\n')
