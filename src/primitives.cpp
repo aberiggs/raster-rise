@@ -22,7 +22,7 @@ Vec2i to_screen_space(const Vec3f& ndc, int width, int height) {
     ZoneScopedN("to_screen_space"); // Add Tracy profiling for this function
 
     // Convert to screen space
-    int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
+    int x = static_cast<int>((-ndc.x() + 1.0f) * 0.5f * width);  // Flip x-axis
     int y = static_cast<int>((-ndc.y() + 1.0f) * 0.5f * height); // Flip y-axis
     return {x, y};
 }

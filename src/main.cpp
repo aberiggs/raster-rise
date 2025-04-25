@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[ -- Starting raster-rise -- ]\n" << std::endl;
 
     try {
-        constexpr Renderer::Mode mode = Renderer::Mode::Normals;
+        [[maybe_unused]] constexpr Renderer::Mode mode = Renderer::Mode::Normals;
 
         FrameBuffer frame_buffer{diablo_model(mode)};
 
@@ -36,11 +36,17 @@ int main(int argc, char* argv[]) {
 
 FrameBuffer some_triangles() {
     FrameBuffer frame_buffer{1500, 1500};
+    Camera camera{};
+    camera.set_position({0.f, 0.f, -4.f});
 
     // draw_triangle(Vec3i{7, 45, 0} * 10, Vec3i{35, 100, 0} * 10, Vec3i{45, 60, 0} * 10, frame_buffer, Colors::red);
     // draw_triangle(Vec3i{120, 35, 0} * 10, Vec3i{90, 5, 0} * 10, Vec3i{45, 110, 0} * 10, frame_buffer, Colors::white);
     // draw_triangle(Vec3i{115, 83, 0} * 10, Vec3i{80, 90, 0} * 10, Vec3i{85, 120, 0} * 10, frame_buffer,
     // Colors::green);
+
+    Object triangle_a = Object::triangle({0.f, 0.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f});
+    Object triangle_b = Object::triangle({1.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 0.f, 0.f});
+    Renderer::draw({triangle_a, triangle_b}, camera, frame_buffer, Renderer::Mode::Wireframe);
 
     return frame_buffer;
 }

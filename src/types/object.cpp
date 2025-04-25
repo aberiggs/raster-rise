@@ -44,3 +44,10 @@ void Object::load_obj(const std::string& filename) {
         }
     }
 }
+
+Object Object::triangle(Vec3f a, Vec3f b, Vec3f c) {
+    Object object{};
+    object.m_vertices = {a, b, c};
+    object.m_faces = {{0, 1, 2}};
+    return object;
+}

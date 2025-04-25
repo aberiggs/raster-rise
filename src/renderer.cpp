@@ -90,19 +90,13 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
 } // namespace
 
 void Renderer::draw(const Object& object, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
-    FrameMarkNamed("Renderer::draw");
+    draw(std::vector<Object>{object}, camera, frame_buffer, mode);
+}
 
-    Timer timer("Renderer::draw");
+void Renderer::draw(const std::vector<Object>& objects, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
+    FrameMarkStart("Renderer::draw");
 
-    float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
-
-    // 1. Transform to view space
-    std::vector<Vec4f> view_space_vertices =
-        to_view_space(object.vertices(), object.transform_matrix(), camera.view_matrix());
-    // 2. Transform to normalized device coordinates (NDC)
-    std::vector<Vec3f> ndc_vertices = apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
-
-    // Only reconstruct the z-buffer if the size of the frame buffer has changed
+    // Only re-allocate the z-buffer if the size of the frame buffer has changed
     static ZBuffer z_buffer{frame_buffer.width(), frame_buffer.height()};
     if (z_buffer.size() != frame_buffer.width() * frame_buffer.height()) {
         z_buffer = ZBuffer{frame_buffer.width(), frame_buffer.height()};
@@ -110,61 +104,72 @@ void Renderer::draw(const Object& object, const Camera& camera, FrameBuffer& fra
         z_buffer.clear();
     }
 
-    auto task = [&](std::size_t i) {
-        const auto& face = object.faces()[i];
+    float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
 
-        // Get the vertices of the triangle in view space
-        Vec3f v0_view{view_space_vertices[face[0]]};
-        Vec3f v1_view{view_space_vertices[face[1]]};
-        Vec3f v2_view{view_space_vertices[face[2]]};
+    for (const auto& object : objects) {
+        // 1. Transform to view space
+        std::vector<Vec4f> view_space_vertices =
+            to_view_space(object.vertices(), object.transform_matrix(), camera.view_matrix());
+        // 2. Transform to normalized device coordinates (NDC)
+        std::vector<Vec3f> ndc_vertices =
+            apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
+        auto task = [&](std::size_t i) {
+            const auto& face = object.faces()[i];
 
-        // Calculate the normal of the face
-        // TODO: Figure out why this only works when flipped
-        Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
+            // Get the vertices of the triangle in view space
+            Vec3f v0_view{view_space_vertices[face[0]]};
+            Vec3f v1_view{view_space_vertices[face[1]]};
+            Vec3f v2_view{view_space_vertices[face[2]]};
 
-        if (normal.z() < 0) {
-            // Cull the backface
-            return;
-        }
+            // Calculate the normal of the face
+            // TODO: Figure out why this only works when flipped
+            Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-        switch (mode) {
-            case Mode::Wireframe: {
-
-                Color3 color = Colors::green;
-                draw_triangle(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer, color);
-                break;
+            if (normal.z() < 0) {
+                // Cull the backface
+                return;
             }
-            case Mode::Shaded: {
-                Vec3f unit_normal = normal.unit();
 
-                // Calculate the light intensity based on the angle between the normal and the light direction
-                Vec3f light_direction = Vec3f{1.f, 1.f, 1.f}.unit(); // Light points into the screen
-                const float intensity = std::max(0.01f, unit_normal.dot(light_direction)); // Some ambient light
+            switch (mode) {
+                case Mode::Wireframe: {
 
-                // Use the intensity to shade the color
-                Color3 color = {intensity, intensity, intensity};
-                draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,
-                                     z_buffer, color);
-                break;
+                    Color3 color = Colors::white;
+                    draw_triangle(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,
+                                  color);
+                    break;
+                }
+                case Mode::Shaded: {
+                    Vec3f unit_normal = normal.unit();
+
+                    // Calculate the light intensity based on the angle between the normal and the light direction
+                    Vec3f light_direction = Vec3f{1.f, 1.f, 1.f}.unit(); // Light points into the screen
+                    const float intensity = std::max(0.01f, unit_normal.dot(light_direction)); // Some ambient light
+
+                    // Use the intensity to shade the color
+                    Color3 color = {intensity, intensity, intensity};
+                    draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]],
+                                         frame_buffer, z_buffer, color);
+                    break;
+                }
+                case Mode::Normals: {
+                    Vec3f unit_normal = normal.unit();
+
+                    float r = std::abs(unit_normal.x());
+                    float g = std::abs(unit_normal.y());
+                    float b = std::abs(unit_normal.z());
+
+                    Color3 color{r, g, b};
+                    draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]],
+                                         frame_buffer, z_buffer, color);
+                    break;
+                }
+                default: {
+                    throw std::invalid_argument("Invalid renderer mode");
+                }
             }
-            case Mode::Normals: {
-                Vec3f unit_normal = normal.unit();
+        };
 
-                float r = std::abs(unit_normal.x());
-                float g = std::abs(unit_normal.y());
-                float b = std::abs(unit_normal.z());
-
-                Color3 color{r, g, b};
-                draw_triangle_filled(ndc_vertices[face[0]], ndc_vertices[face[1]], ndc_vertices[face[2]], frame_buffer,
-                                     z_buffer, color);
-                break;
-            }
-            default: {
-                throw std::invalid_argument("Invalid renderer mode");
-            }
-        }
-    };
-
-    Timer timer2("Apply Fragment Shader"); // For profiling
-    async_for(0, object.faces().size(), task);
+        async_for(0, object.faces().size(), task);
+    }
+    FrameMarkEnd("Renderer::draw");
 }

@@ -26,6 +26,8 @@ public:
     // TODO: Impl
     static Object cube();
 
+    static Object triangle(Vec3f a, Vec3f b, Vec3f c);
+
 private:
     std::vector<Vec3f> m_vertices{};
 
