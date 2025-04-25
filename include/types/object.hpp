@@ -1,26 +1,30 @@
 #pragma once
 
 #include "types/frame_buffer.hpp"
+#include "types/matrix.hpp"
 #include "types/vec.hpp"
 
 #include <vector>
 
-class Model {
+class Object {
 public:
     using Face = std::array<int, 3>;
 
-    Model() = default;
-    Model(const std::string& filename);
+    Object() = default;
+    Object(const std::string& filename);
 
-    void load(const std::string& filename);
+    void load_obj(const std::string& filename);
 
     const std::vector<Face>& faces() const { return m_faces; }
     const std::vector<Vec3f>& vertices() const { return m_vertices; }
 
+    // TODO: Add ability to transform objects - for now we'll just use the identity matrix
+    const Matrix4x4f transform_matrix() const { return Matrix4x4f::identity(); }
+
     // TODO: Impl
-    static Model sphere(int slices, int stacks);
+    static Object sphere(int slices, int stacks);
     // TODO: Impl
-    static Model cube();
+    static Object cube();
 
 private:
     std::vector<Vec3f> m_vertices{};

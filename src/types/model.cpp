@@ -1,18 +1,13 @@
-#include "types/model.hpp"
-#include "primitives.hpp"
-#include "types/frame_buffer.hpp"
+#include "types/object.hpp"
 #include "types/vec.hpp"
-#include "utils/timer.hpp"
 
-#include <algorithm>
-#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
-Model::Model(const std::string& filename) { load(filename); }
+Object::Object(const std::string& filename) { load_obj(filename); }
 
-void Model::load(const std::string& filename) {
+void Object::load_obj(const std::string& filename) {
     // Load the model from the file
     std::ifstream file(filename);
     if (!file.is_open()) {

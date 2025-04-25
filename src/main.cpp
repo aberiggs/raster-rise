@@ -1,12 +1,9 @@
 #include <iostream>
 
 #include "camera.hpp"
-#include "primitives.hpp"
 #include "renderer.hpp"
 #include "types/frame_buffer.hpp"
-#include "types/model.hpp"
-#include "utils/colors.hpp"
-#include "utils/timer.hpp"
+#include "types/object.hpp"
 
 #include <tracy/Tracy.hpp>
 
@@ -66,7 +63,7 @@ FrameBuffer body_model(Renderer::Mode mode) {
     Camera camera{};
     camera.set_position({0.f, 0.f, -4.f});
 
-    Model model{"objects/body.obj"};
+    Object model{"objects/body.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;
@@ -77,7 +74,7 @@ FrameBuffer diablo_model(Renderer::Mode mode) {
     Camera camera{};
     camera.set_position({0.f, 0.f, -4.f});
 
-    Model model{"objects/diablo3_post.obj"};
+    Object model{"objects/diablo3_post.obj"};
     Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;
@@ -88,7 +85,7 @@ FrameBuffer other(const std::string& name, Renderer::Mode mode) {
     Camera camera{};
     camera.set_position({0.f, 0.f, -3.f});
 
-    Model model{name};
+    Object model{name};
     Renderer::draw(model, camera, frame_buffer, mode);
 
     return frame_buffer;

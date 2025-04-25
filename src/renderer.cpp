@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <future>
-#include <iostream>
 #include <vector>
 
 namespace {
@@ -90,17 +89,16 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
 
 } // namespace
 
-void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
+void Renderer::draw(const Object& object, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
     FrameMarkNamed("Renderer::draw");
 
     Timer timer("Renderer::draw");
 
     float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
 
-    // Put at origin until object transforms are implemented
-    constexpr auto transform_matrix = Matrix4x4f::identity();
     // 1. Transform to view space
-    std::vector<Vec4f> view_space_vertices = to_view_space(model.vertices(), transform_matrix, camera.view_matrix());
+    std::vector<Vec4f> view_space_vertices =
+        to_view_space(object.vertices(), object.transform_matrix(), camera.view_matrix());
     // 2. Transform to normalized device coordinates (NDC)
     std::vector<Vec3f> ndc_vertices = apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
 
@@ -113,7 +111,7 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
     }
 
     auto task = [&](std::size_t i) {
-        const auto& face = model.faces()[i];
+        const auto& face = object.faces()[i];
 
         // Get the vertices of the triangle in view space
         Vec3f v0_view{view_space_vertices[face[0]]};
@@ -168,5 +166,5 @@ void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame
     };
 
     Timer timer2("Apply Fragment Shader"); // For profiling
-    async_for(0, model.faces().size(), task);
+    async_for(0, object.faces().size(), task);
 }
