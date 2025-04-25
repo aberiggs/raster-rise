@@ -4,6 +4,8 @@
 #include "types/z_buffer.hpp"
 #include "utils/timer.hpp"
 
+#include <tracy/Tracy.hpp> // Tracy profiling
+
 #include <algorithm>
 #include <future>
 #include <iostream>
@@ -36,8 +38,9 @@ template <typename F> void async_for(std::size_t start, std::size_t end, F func)
 // TODO: Reorganize
 std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, const Matrix4x4f& transform_mat,
                                  const Matrix4x4f& view_mat) {
+    ZoneScopedN("to_view_space");
 
-    Timer timer("Convert to View Space"); // For profiling
+    Timer timer("Convert to View Space");
 
     std::vector<Vec4f> view_space_vertices{};
     view_space_vertices.resize(object_vertices.size());
@@ -61,8 +64,9 @@ std::vector<Vec4f> to_view_space(const std::vector<Vec3f>& object_vertices, cons
 
 // TODO: Reorganize
 std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, const Matrix4x4f& projection_mat) {
+    ZoneScopedN("apply_vertex_shader");
 
-    Timer timer("Apply Vertex Shader"); // For profiling
+    Timer timer("Apply Vertex Shader");
 
     std::vector<Vec3f> ndc_vertices{};
     ndc_vertices.resize(view_space.size());
@@ -87,7 +91,9 @@ std::vector<Vec3f> apply_vertex_shader(const std::vector<Vec4f>& view_space, con
 } // namespace
 
 void Renderer::draw(const Model& model, const Camera& camera, FrameBuffer& frame_buffer, Mode mode) {
-    Timer timer("Renderer::draw"); // For profiling
+    FrameMarkNamed("Renderer::draw");
+
+    Timer timer("Renderer::draw");
 
     float aspect_ratio = static_cast<float>(frame_buffer.width()) / static_cast<float>(frame_buffer.height());
 

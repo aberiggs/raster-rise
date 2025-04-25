@@ -1,10 +1,10 @@
 #include "primitives.hpp" // self
 #include "types/vec.hpp"
-#include "utils/timer.hpp"
+
+#include <tracy/Tracy.hpp> // Tracy profiling
 
 #include <algorithm>  // std::sort
 #include <functional> // For std::hash
-#include <iostream>
 #include <unordered_map>
 namespace std {
 template <> struct hash<Vec3f> {
@@ -19,6 +19,8 @@ template <> struct hash<Vec3f> {
 namespace {
 
 Vec2i to_screen_space(const Vec3f& ndc, int width, int height) {
+    ZoneScopedN("to_screen_space"); // Add Tracy profiling for this function
+
     // Convert to screen space
     int x = static_cast<int>((ndc.x() + 1.0f) * 0.5f * width);
     int y = static_cast<int>((-ndc.y() + 1.0f) * 0.5f * height); // Flip y-axis
@@ -26,6 +28,8 @@ Vec2i to_screen_space(const Vec3f& ndc, int width, int height) {
 }
 
 std::pair<Vec2i, Vec2i> find_bounding_box(Vec2i a, Vec2i b, Vec2i c) {
+    ZoneScopedN("find_bounding_box"); // Add Tracy profiling for this function
+
     // Find the bounding box of the triangle
     int min_x = std::min({a.x(), b.x(), c.x()});
     int max_x = std::max({a.x(), b.x(), c.x()});
@@ -36,6 +40,8 @@ std::pair<Vec2i, Vec2i> find_bounding_box(Vec2i a, Vec2i b, Vec2i c) {
 }
 
 double signed_triangle_area(Vec2i a, Vec2i b, Vec2i c) {
+    ZoneScopedN("signed_triangle_area"); // Add Tracy profiling for this function
+
     // The shoelace formula
     return 0.5 *
            ((b.y() - a.y()) * (b.x() + a.x()) + (c.y() - b.y()) * (c.x() + b.x()) + (a.y() - c.y()) * (a.x() + c.x()));
@@ -44,6 +50,7 @@ double signed_triangle_area(Vec2i a, Vec2i b, Vec2i c) {
 } // namespace
 
 void draw_line(Vec3f a, Vec3f b, FrameBuffer& frame_buffer, const Color3& color) {
+    ZoneScopedN("draw_line"); // Add Tracy profiling for this function
 
     // Convert to screen space
     Vec3i a_screen = to_screen_space(a, frame_buffer.width(), frame_buffer.height());
@@ -73,6 +80,7 @@ void draw_line(Vec3f a, Vec3f b, FrameBuffer& frame_buffer, const Color3& color)
 }
 
 void draw_triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& frame_buffer, const Color3& color) {
+    ZoneScopedN("draw_triangle"); // Add Tracy profiling for this function
     draw_line(a, b, frame_buffer, color);
     draw_line(b, c, frame_buffer, color);
     draw_line(c, a, frame_buffer, color);
@@ -80,6 +88,7 @@ void draw_triangle(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& 
 
 void draw_triangle_filled(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameBuffer& frame_buffer, ZBuffer& z_buffer,
                           const Color3& color) {
+    ZoneScopedN("draw_triangle_filled"); // Add Tracy profiling for this function
 
     // TODO: Consider moving these statics somewhere else
     static std::mutex screen_cache_mutex;
