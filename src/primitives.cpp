@@ -5,7 +5,9 @@
 
 #include <algorithm>  // std::sort
 #include <functional> // For std::hash
+#include <iostream>
 #include <unordered_map>
+
 namespace std {
 template <> struct hash<Vec3f> {
     size_t operator()(const Vec3f& vec) const {
@@ -42,9 +44,12 @@ std::pair<Vec2i, Vec2i> find_bounding_box(Vec2i a, Vec2i b, Vec2i c) {
 double signed_triangle_area(Vec2i a, Vec2i b, Vec2i c) {
     ZoneScopedN("signed_triangle_area"); // Add Tracy profiling for this function
 
+    // TODO: Revisit this original formula
     // The shoelace formula
-    return 0.5 *
-           ((b.y() - a.y()) * (b.x() + a.x()) + (c.y() - b.y()) * (c.x() + b.x()) + (a.y() - c.y()) * (a.x() + c.x()));
+    // return 0.5 *
+    // ((b.y() - a.y()) * (b.x() + a.x()) + (c.y() - b.y()) * (c.x() + b.x()) + (a.y() - c.y()) * (a.x() + c.x()));
+
+    return ((b.y() - c.y()) * (a.x() - c.x()) + (c.x() - b.x()) * (a.y() - c.y()));
 }
 
 } // namespace
@@ -72,8 +77,14 @@ void draw_line(Vec3f a, Vec3f b, FrameBuffer& frame_buffer, const Color3& color)
         int y = a_screen.y() + t * (b_screen.y() - a_screen.y());
 
         if (transpose) {
+            if (y < 0 || y >= frame_buffer.width() || x < 0 || x >= frame_buffer.height()) {
+                continue;
+            }
             frame_buffer[y, x] = color;
         } else {
+            if (x < 0 || x >= frame_buffer.width() || y < 0 || y >= frame_buffer.height()) {
+                continue;
+            }
             frame_buffer[x, y] = color;
         }
     }
@@ -128,17 +139,14 @@ void draw_triangle_filled(const Vec3f& a, const Vec3f& b, const Vec3f& c, FrameB
             Vec2i p{x, y};
 
             // Check if the point is inside the triangle using barycentric coordinates
-            double alpha = signed_triangle_area(p, b_screen, c_screen);
-            double beta = signed_triangle_area(a_screen, p, c_screen);
-            double gamma = signed_triangle_area(a_screen, b_screen, p);
+            double alpha = signed_triangle_area(p, b_screen, c_screen) / total_area;
+            double beta = signed_triangle_area(p, c_screen, a_screen) / total_area;
+            double gamma = signed_triangle_area(p, a_screen, b_screen) / total_area;
 
-            // Normalize the barycentric coordinates
-            alpha /= total_area;
-            beta /= total_area;
-            gamma /= total_area;
-
-            if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+            if (alpha >= 0.0 && beta >= 0.0 && gamma >= 0.0) {
                 // Point is in the triangle
+
+                // Get z value
                 float z = alpha * a.z() + beta * b.z() + gamma * c.z();
                 z_buffer.lock(x, y);
                 if (z > z_buffer[x, y]) {

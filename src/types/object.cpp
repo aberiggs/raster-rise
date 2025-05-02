@@ -43,6 +43,9 @@ void Object::load_obj(const std::string& filename) {
             m_faces.emplace_back(face);
         }
     }
+
+    std::cout << "Loaded " << m_vertices.size() << " vertices and " << m_faces.size() << " faces from " << filename
+              << std::endl;
 }
 
 Object Object::triangle(Vec3f a, Vec3f b, Vec3f c) {

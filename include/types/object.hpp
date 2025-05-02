@@ -1,6 +1,5 @@
 #pragma once
 
-#include "types/frame_buffer.hpp"
 #include "types/matrix.hpp"
 #include "types/vec.hpp"
 

@@ -113,6 +113,7 @@ void Renderer::draw(const std::vector<Object>& objects, const Camera& camera, Fr
         // 2. Transform to normalized device coordinates (NDC)
         std::vector<Vec3f> ndc_vertices =
             apply_vertex_shader(view_space_vertices, camera.projection_matrix(aspect_ratio));
+
         auto task = [&](std::size_t i) {
             const auto& face = object.faces()[i];
 
@@ -125,7 +126,9 @@ void Renderer::draw(const std::vector<Object>& objects, const Camera& camera, Fr
             // TODO: Figure out why this only works when flipped
             Vec3f normal = (v1_view - v0_view).cross(v2_view - v0_view) * -1.f;
 
-            if (normal.z() < 0) {
+            // TODO: Make global option
+            constexpr bool cull_backfaces = false;
+            if (cull_backfaces && normal.z() <= 0.f) {
                 // Cull the backface
                 return;
             }
@@ -171,5 +174,6 @@ void Renderer::draw(const std::vector<Object>& objects, const Camera& camera, Fr
 
         async_for(0, object.faces().size(), task);
     }
+
     FrameMarkEnd("Renderer::draw");
 }

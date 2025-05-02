@@ -47,7 +47,7 @@ public:
     [[nodiscard]] Vec unit() const {
         auto len = length();
         if (len == 0) {
-            throw std::runtime_error("Cannot normalize a zero-length vector");
+            return *this; // Avoid division by zero
         }
         return *this / len;
     }
