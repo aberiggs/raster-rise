@@ -1,15 +1,6 @@
 # raster-rise 🌄
 A minimal software rasterizer written in C++
 
-## Features
-Below are a list of some features currently implemented or planned for the future.
-- [x] Triangle filling algorithm
-- [x] `.obj` file support
-- [x] Back face culling
-- [x] Parallelism
-- [ ] GUI
-- [ ] SIMD optimizations
-
 ## Build Guide
 *Coming soon™*
 
